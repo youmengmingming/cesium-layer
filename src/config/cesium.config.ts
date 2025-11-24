@@ -39,8 +39,8 @@ export const defaultConfig: CesiumConfig = {
   token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJkZTQ4M2MzYS02YjI0LTRkN2YtYTcxNC1lZGNiZDUzNmVlNGEiLCJpZCI6MzYzMzI3LCJpYXQiOjE3NjM5ODEyODV9.cvweDrQKtp3UaWrVYjiAleWk3jwwxPKSH98ES40AN6U',
   
   imageryProvider: {
-    useIonImagery: true, // 使用 Cesium Ion 默认影像
-    type: 'osm', // 如果不使用 Ion，可以使用 OSM
+    useIonImagery: false, // 使用 Cesium Ion 默认影像（assetId 2 可能使用 Bing Maps，在某些地区可能访问失败）
+    type: 'osm', // 默认使用 OSM，更可靠
   },
   
   terrainProvider: {
