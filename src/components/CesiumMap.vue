@@ -3,6 +3,12 @@
     <div class="cesium-map-container" ref="mapContainerRef"></div>
     <DrawingToolbar />
     <LayerManager />
+    <EntityEditorPanel
+      v-if="showEditorPanel"
+      :entity-info="selectedEntity"
+      @close="handleCloseEditor"
+      @delete="handleDeleteEntity"
+    />
     <!-- <div class="window-bridge-panel">
       <div class="window-bridge-row">
         <span>当前窗口：{{ roleLabel }}</span>
@@ -29,12 +35,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, toRef, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue';
+import * as Cesium from 'cesium';
 import type { CesiumConfig } from '../config/cesium.config';
 import { useWindowBridge } from '../composables/useWindowBridge';
 import { useCesiumViewer } from '../composables/useCesiumViewer';
+import { useEntitySelection } from '../composables/useEntitySelection';
 import LayerManager from './LayerManager.vue';
 import DrawingToolbar from './DrawingToolbar.vue';
+import EntityEditorPanel from './EntityEditorPanel.vue';
 
 interface Props {
   config?: Partial<CesiumConfig>;
@@ -60,6 +69,16 @@ const {
   destroyViewer,
 } = useCesiumViewer();
 
+const {
+  selectedEntity,
+  initEntitySelection,
+  deselectEntity,
+} = useEntitySelection();
+
+const showEditorPanel = ref(false);
+let selectionHandler: Cesium.ScreenSpaceEventHandler | null = null;
+let doubleClickHandler: ((event: any) => void) | null = null;
+
 const isPrimary = computed(() => bridgeRole.value === 'primary');
 const roleLabel = computed(() => (isPrimary.value ? '主窗口' : '副窗口'));
 const connectionLabel = computed(() => {
@@ -74,6 +93,33 @@ const connectionLabel = computed(() => {
 
 const bootViewer = async () => {
   await initViewer(configRef.value || {});
+  
+  // 等待 viewer 完全初始化后再设置实体选择
+  if (viewer.value) {
+    // 使用 nextTick 确保 viewer 完全准备好
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    
+    // 禁用 Cesium 默认的选中行为
+    viewer.value.selectedEntity = undefined;
+    
+    // 清理之前的 handler
+    if (selectionHandler) {
+      selectionHandler.destroy();
+      selectionHandler = null;
+    }
+    
+    // 初始化自定义实体选择
+    selectionHandler = initEntitySelection();
+    
+    // 监听双击事件
+    const canvas = viewer.value.cesiumWidget.canvas;
+    doubleClickHandler = (event: any) => {
+      if (event.detail?.entity) {
+        showEditorPanel.value = true;
+      }
+    };
+    canvas.addEventListener('entity-double-click', doubleClickHandler);
+  }
 };
 
 const handleOpenSecondary = () => {
@@ -87,7 +133,24 @@ onMounted(async () => {
   await bootViewer();
 });
 
+const handleCloseEditor = () => {
+  showEditorPanel.value = false;
+  deselectEntity();
+};
+
+const handleDeleteEntity = (entity: Cesium.Entity) => {
+  deselectEntity();
+};
+
 onUnmounted(() => {
+  if (selectionHandler) {
+    selectionHandler.destroy();
+    selectionHandler = null;
+  }
+  if (viewer.value && doubleClickHandler) {
+    viewer.value.cesiumWidget.canvas.removeEventListener('entity-double-click', doubleClickHandler);
+    doubleClickHandler = null;
+  }
   destroyViewer();
 });
 
