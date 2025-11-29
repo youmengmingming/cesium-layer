@@ -178,67 +178,112 @@ const toggleLayer = (layerId: string, visible: boolean) => {
 
 <style scoped>
 .layer-manager {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 320px;
-  max-height: calc(100vh - 32px);
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: #333;
   overflow-y: auto;
-  padding: 16px;
-  border-radius: 12px;
-  background: rgba(17, 24, 39, 0.78);
-  color: #fff;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
 }
 
 .layer-manager__header {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.layer-manager__header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
 }
 
 .layer-manager__form {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .layer-manager__input {
   flex: 1;
-  padding: 6px 10px;
+  padding: 10px 14px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.layer-manager__input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.layer-manager__input::placeholder {
+  color: #999;
 }
 
 .layer-manager__button {
   border: none;
   border-radius: 8px;
-  padding: 0 12px;
-  background: #3d82ff;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.layer-manager__button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.layer-manager__button:active {
+  transform: translateY(0);
 }
 
 .layer-manager__empty {
-  margin-top: 24px;
+  margin-top: 40px;
+  padding: 40px 20px;
+  text-align: center;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #999;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #e0e0e0;
 }
 
 .layer-manager__list {
-  margin-top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  flex: 1;
 }
 
 .layer-card {
-  padding: 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
+  padding: 16px;
+  border-radius: 12px;
+  background: #f9f9f9;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.2s;
+}
+
+.layer-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
 }
 
 .layer-card__header {
@@ -249,43 +294,63 @@ const toggleLayer = (layerId: string, visible: boolean) => {
 
 .layer-card__title {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
+  color: #333;
+  margin: 0;
 }
 
 .layer-card__subtitle {
-  margin-top: 2px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
+  margin-top: 4px;
+  font-size: 13px;
+  color: #666;
+  margin: 0;
 }
 
 .layer-card__actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .icon-button {
-  padding: 4px 8px;
+  padding: 6px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: transparent;
-  color: #fff;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #666;
   cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.icon-button:hover {
+  background: #fee;
+  border-color: #fcc;
+  color: #c33;
 }
 
 .layer-card__footer {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .footer-button {
   flex: 1;
-  padding: 6px 8px;
+  padding: 8px 12px;
   border-radius: 6px;
-  border: none;
-  background: rgba(59, 130, 246, 0.6);
-  color: #fff;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #667eea;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.footer-button:hover {
+  background: #f8f9ff;
+  border-color: #667eea;
+  transform: translateY(-1px);
 }
 
 .switch {
@@ -308,7 +373,7 @@ const toggleLayer = (layerId: string, visible: boolean) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: #ccc;
   transition: 0.2s;
   border-radius: 34px;
 }
@@ -323,10 +388,11 @@ const toggleLayer = (layerId: string, visible: boolean) => {
   background-color: white;
   transition: 0.2s;
   border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 input:checked + .slider {
-  background-color: #3d82ff;
+  background-color: #667eea;
 }
 
 input:checked + .slider:before {

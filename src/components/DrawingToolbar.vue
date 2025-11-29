@@ -154,136 +154,169 @@ const handleCancel = () => {
 
 <style scoped>
 .drawing-toolbar {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  width: 280px;
-  padding: 16px;
-  border-radius: 12px;
-  background: rgba(17, 24, 39, 0.78);
-  color: #fff;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: #333;
+  overflow-y: auto;
 }
 
 .drawing-toolbar__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f0f0f0;
 }
 
 .drawing-toolbar__header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
+  color: #333;
 }
 
 .drawing-toolbar__cancel {
-  padding: 4px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 6px 16px;
+  border: 1px solid #e0e0e0;
   border-radius: 6px;
-  background: transparent;
-  color: #fff;
-  font-size: 12px;
+  background: #fff;
+  color: #666;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
+  font-weight: 500;
 }
 
 .drawing-toolbar__cancel:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+  color: #333;
 }
 
 .drawing-toolbar__content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
+  flex: 1;
 }
 
 .drawing-toolbar__layer-select {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .drawing-toolbar__label {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  color: #555;
+  font-weight: 500;
 }
 
 .drawing-toolbar__select {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.drawing-toolbar__select:hover:not(:disabled) {
+  border-color: #667eea;
+}
+
+.drawing-toolbar__select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .drawing-toolbar__select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background: #f5f5f5;
 }
 
 .drawing-toolbar__hint {
-  padding: 8px;
-  border-radius: 6px;
-  background: rgba(255, 193, 7, 0.2);
-  color: #ffc107;
-  font-size: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff3cd;
+  color: #856404;
+  font-size: 13px;
   text-align: center;
+  border: 1px solid #ffeaa7;
 }
 
 .drawing-toolbar__tools {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 12px;
 }
 
 .drawing-toolbar__tool {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  font-size: 12px;
+  gap: 6px;
+  padding: 16px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 80px;
+  justify-content: center;
 }
 
 .drawing-toolbar__tool:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: #f8f9ff;
+  border-color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
 .drawing-toolbar__tool.active {
-  background: rgba(61, 130, 255, 0.3);
-  border-color: #3d82ff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
   color: #fff;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.drawing-toolbar__tool.active .tool-icon {
+  transform: scale(1.1);
 }
 
 .drawing-toolbar__tool:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+  background: #f5f5f5;
 }
 
 .tool-icon {
-  font-size: 20px;
+  font-size: 24px;
   line-height: 1;
+  transition: transform 0.2s;
 }
 
 .drawing-toolbar__tip {
-  padding: 8px;
-  border-radius: 6px;
-  background: rgba(61, 130, 255, 0.2);
-  color: #fff;
-  font-size: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #e3f2fd;
+  color: #1976d2;
+  font-size: 13px;
   text-align: center;
+  border: 1px solid #bbdefb;
+  font-weight: 500;
 }
 
 .drawing-toolbar__tip p {

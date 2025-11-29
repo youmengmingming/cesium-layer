@@ -1,14 +1,6 @@
 <template>
   <div class="cesium-map-wrapper">
     <div class="cesium-map-container" ref="mapContainerRef"></div>
-    <DrawingToolbar />
-    <LayerManager />
-    <EntityEditorPanel
-      v-if="showEditorPanel"
-      :entity-info="selectedEntity"
-      @close="handleCloseEditor"
-      @delete="handleDeleteEntity"
-    />
     <!-- <div class="window-bridge-panel">
       <div class="window-bridge-row">
         <span>当前窗口：{{ roleLabel }}</span>
@@ -41,8 +33,7 @@ import type { CesiumConfig } from '../config/cesium.config';
 import { useWindowBridge } from '../composables/useWindowBridge';
 import { useCesiumViewer } from '../composables/useCesiumViewer';
 import { useEntitySelection } from '../composables/useEntitySelection';
-import LayerManager from './LayerManager.vue';
-import DrawingToolbar from './DrawingToolbar.vue';
+import { useWidgetManager } from '../composables/useWidgetManager';
 import EntityEditorPanel from './EntityEditorPanel.vue';
 
 interface Props {
@@ -75,7 +66,8 @@ const {
   deselectEntity,
 } = useEntitySelection();
 
-const showEditorPanel = ref(false);
+const { openWidget, closeWidget } = useWidgetManager();
+const editorWindowId = ref<string | null>(null);
 let selectionHandler: Cesium.ScreenSpaceEventHandler | null = null;
 let doubleClickHandler: ((event: any) => void) | null = null;
 
@@ -115,7 +107,7 @@ const bootViewer = async () => {
     const canvas = viewer.value.cesiumWidget.canvas;
     doubleClickHandler = (event: any) => {
       if (event.detail?.entity) {
-        showEditorPanel.value = true;
+        openEntityEditor(event.detail);
       }
     };
     canvas.addEventListener('entity-double-click', doubleClickHandler);
@@ -133,13 +125,34 @@ onMounted(async () => {
   await bootViewer();
 });
 
-const handleCloseEditor = () => {
-  showEditorPanel.value = false;
-  deselectEntity();
-};
-
-const handleDeleteEntity = (entity: Cesium.Entity) => {
-  deselectEntity();
+const openEntityEditor = (entityInfo: any) => {
+  // 如果编辑器窗口已打开，先关闭
+  if (editorWindowId.value) {
+    closeWidget(editorWindowId.value);
+  }
+  
+  // 打开新的编辑器窗口
+  editorWindowId.value = openWidget({
+    component: EntityEditorPanel,
+    title: '实体属性编辑器',
+    props: {
+      entityInfo: entityInfo,
+    },
+    events: {
+      close: () => {
+        editorWindowId.value = null;
+        deselectEntity();
+      },
+      delete: (entity: Cesium.Entity) => {
+        editorWindowId.value = null;
+        deselectEntity();
+      },
+    },
+    width: 450,
+    height: 700,
+    x: (window.innerWidth - 450) / 2,
+    y: 100,
+  });
 };
 
 onUnmounted(() => {
