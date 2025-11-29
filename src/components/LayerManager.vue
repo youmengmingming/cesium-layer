@@ -31,7 +31,7 @@
               <input
                 type="checkbox"
                 :checked="layer.visible"
-                @change="toggleLayer(layer.id, $event.target?.checked ?? false)"
+                @change="toggleLayer(layer.id, ($event.target as HTMLInputElement)?.checked ?? false)"
               />
               <span class="slider" />
             </label>

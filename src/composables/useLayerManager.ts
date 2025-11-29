@@ -11,13 +11,6 @@ export interface LayerSummary {
   primitiveCount: number;
 }
 
-const ensureViewer = (viewer: Cesium.Viewer | null) => {
-  if (!viewer) {
-    throw new Error('Cesium Viewer 尚未初始化');
-  }
-  return viewer;
-};
-
 export function useLayerManager() {
   const cesiumStore = useCesiumStore();
   const layerStore = useLayerStore();
@@ -33,21 +26,9 @@ export function useLayerManager() {
     }))
   );
 
-  const applyLayerVisibility = (layerId: string) => {
-    const layer = layerStore.layers[layerId];
-    if (!layer) {
-      return;
-    }
-
-    const visible = layer.visible;
-    Object.values(layer.entities).forEach((entity) => {
-      entity.show = visible;
-    });
-    Object.values(layer.primitives).forEach((primitive) => {
-      primitive.show = visible;
-    });
-  };
-
+  /**
+   * 创建图层（仅操作仓库，不依赖 Cesium）
+   */
   const createLayer = (name: string, options?: { visible?: boolean; id?: string }) => {
     return layerStore.createLayer({
       name,
@@ -56,52 +37,50 @@ export function useLayerManager() {
     });
   };
 
+  /**
+   * 同时从 Cesium 与仓库中删除图层
+   * 实际逻辑由仓库负责，composable 只做薄封装
+   */
   const removeLayer = (layerId: string) => {
-    const viewer = viewerRef.value;
-    const layer = layerStore.layers[layerId];
-    if (!layer) {
-      return;
-    }
-    if (viewer) {
-      Object.values(layer.entities).forEach((entity) => {
-        viewer.entities.remove(entity);
-      });
-      Object.values(layer.primitives).forEach((primitive) => {
-        viewer.scene.primitives.remove(primitive);
-      });
-    }
-    layerStore.removeLayer(layerId);
+    layerStore.removeLayerWithViewer(layerId);
   };
 
+  /**
+   * 设置图层可见性，并同步到 Cesium
+   */
   const setLayerVisibility = (layerId: string, visible: boolean) => {
-    layerStore.setLayerVisibility(layerId, visible);
-    applyLayerVisibility(layerId);
+    layerStore.setLayerVisibilityWithViewer(layerId, visible);
   };
 
+  /**
+   * 在指定图层中创建 Entity，并挂接到 Cesium 场景
+   * 这里直接复用仓库封装好的统一流程
+   */
   const createEntityInLayer = (
     layerId: string,
     entityOptions: Cesium.Entity.ConstructorOptions
   ) => {
-    const viewer = ensureViewer(viewerRef.value);
-    const entity = viewer.entities.add(entityOptions);
-    layerStore.attachEntity(layerId, entity);
-    entity.show = layerStore.layers[layerId]?.visible ?? true;
-    return entity;
+    return layerStore.createEntityInLayer(layerId, entityOptions);
   };
 
+  /**
+   * 将已有的 Entity 归属到某个图层（仅修改仓库，不负责添加到 viewer）
+   */
   const attachEntity = (layerId: string, entity: Cesium.Entity) => {
     layerStore.attachEntity(layerId, entity);
     entity.show = layerStore.layers[layerId]?.visible ?? true;
   };
 
+  /**
+   * 在指定图层中创建 Primitive，并挂接到 Cesium 场景
+   */
   const createPrimitiveInLayer = (layerId: string, primitive: Cesium.Primitive) => {
-    const viewer = ensureViewer(viewerRef.value);
-    viewer.scene.primitives.add(primitive);
-    layerStore.attachPrimitive(layerId, primitive);
-    primitive.show = layerStore.layers[layerId]?.visible ?? true;
-    return primitive;
+    return layerStore.createPrimitiveInLayer(layerId, primitive);
   };
 
+  /**
+   * 将已有的 Primitive 归属到某个图层（仅修改仓库，不负责添加到 viewer）
+   */
   const attachPrimitive = (layerId: string, primitive: Cesium.Primitive) => {
     layerStore.attachPrimitive(layerId, primitive);
     primitive.show = layerStore.layers[layerId]?.visible ?? true;

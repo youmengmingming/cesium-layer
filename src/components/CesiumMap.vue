@@ -1,6 +1,7 @@
 <template>
   <div class="cesium-map-wrapper">
     <div class="cesium-map-container" ref="mapContainerRef"></div>
+    <DrawingToolbar />
     <LayerManager />
     <!-- <div class="window-bridge-panel">
       <div class="window-bridge-row">
@@ -33,6 +34,7 @@ import type { CesiumConfig } from '../config/cesium.config';
 import { useWindowBridge } from '../composables/useWindowBridge';
 import { useCesiumViewer } from '../composables/useCesiumViewer';
 import LayerManager from './LayerManager.vue';
+import DrawingToolbar from './DrawingToolbar.vue';
 
 interface Props {
   config?: Partial<CesiumConfig>;
