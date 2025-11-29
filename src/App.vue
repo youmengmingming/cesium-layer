@@ -75,13 +75,13 @@ const widgets = computed(() => widgetStore.getWidgets);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding-top: 60px; /* 为固定定位的标题栏留出空间 */
 }
 
 .map-container {
   flex: 1;
   width: 100%;
-  height: calc(100vh - 60px);
-  margin-top: 60px;
+  height: 100%;
   position: relative;
   overflow: hidden;
 }

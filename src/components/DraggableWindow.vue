@@ -133,15 +133,18 @@ const position = ref({ x: props.x, y: props.y });
 const size = ref({ width: props.width, height: props.height });
 const dragOffset = ref({ x: 0, y: 0 });
 
+// 标题栏高度常量
+const HEADER_HEIGHT = 60;
+
 // 计算样式
 const windowStyle = computed(() => {
   if (isMaximized.value) {
     return {
       position: 'fixed',
-      top: '0',
+      top: `${HEADER_HEIGHT}px`,
       left: '0',
       width: '100vw',
-      height: '100vh',
+      height: `calc(100vh - ${HEADER_HEIGHT}px)`,
       zIndex: props.zIndex,
     };
   }
@@ -156,8 +159,13 @@ const windowStyle = computed(() => {
 });
 
 const contentStyle = computed(() => {
+  if (isMaximized.value) {
+    return {
+      height: `calc(100vh - ${HEADER_HEIGHT}px - 40px)`, // 减去标题栏高度和窗口标题栏高度
+    };
+  }
   return {
-    height: isMaximized.value ? 'calc(100vh - 40px)' : `${size.value.height - 40}px`,
+    height: `${size.value.height - 40}px`,
   };
 });
 
@@ -181,9 +189,9 @@ const handleMouseMove = (e: MouseEvent) => {
     x: e.clientX - dragOffset.value.x,
     y: e.clientY - dragOffset.value.y,
   };
-  // 限制在视口内
+  // 限制在视口内，考虑标题栏高度
   position.value.x = Math.max(0, Math.min(position.value.x, window.innerWidth - size.value.width));
-  position.value.y = Math.max(0, Math.min(position.value.y, window.innerHeight - 40));
+  position.value.y = Math.max(HEADER_HEIGHT, Math.min(position.value.y, window.innerHeight - 40));
 };
 
 const stopDrag = () => {
@@ -225,7 +233,7 @@ const close = () => {
 const handleResize = () => {
   if (isMaximized.value) return;
   position.value.x = Math.max(0, Math.min(position.value.x, window.innerWidth - size.value.width));
-  position.value.y = Math.max(0, Math.min(position.value.y, window.innerHeight - 40));
+  position.value.y = Math.max(HEADER_HEIGHT, Math.min(position.value.y, window.innerHeight - 40));
 };
 
 onMounted(() => {

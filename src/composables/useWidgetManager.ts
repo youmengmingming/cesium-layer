@@ -21,6 +21,8 @@ export function useWidgetManager() {
     const headerHeight = 60;
     const defaultX = config.x ?? (window.innerWidth - (config.width || 400)) / 2;
     const defaultY = config.y ?? (window.innerHeight - headerHeight - (config.height || 300)) / 2 + headerHeight;
+    // 确保 y 坐标不小于标题栏高度
+    const finalY = Math.max(headerHeight, defaultY);
     
     const widgetConfig: WidgetConfig = {
       id,
@@ -31,7 +33,7 @@ export function useWidgetManager() {
       width: config.width || 400,
       height: config.height || 300,
       x: defaultX,
-      y: defaultY,
+      y: finalY,
       minWidth: config.minWidth || 200,
       minHeight: config.minHeight || 150,
       resizable: config.resizable !== false,
