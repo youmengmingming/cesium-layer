@@ -258,7 +258,32 @@ export function useEntitySelection() {
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
     handler.setInputAction((click: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
-      const pickedObject = viewer.scene.pick(click.position);
+      // 使用多种方式尝试拾取实体
+      let pickedObject: any = undefined;
+      
+      try {
+        pickedObject = viewer.scene.pick(click.position);
+      } catch (e) {
+        console.warn('Scene pick failed:', e);
+      }
+      
+      // 如果直接拾取失败，尝试使用 drillPick（可以拾取被遮挡的实体）
+      if (!pickedObject || !(pickedObject.id instanceof Cesium.Entity)) {
+        try {
+          const objects = viewer.scene.drillPick(click.position);
+          if (objects && objects.length > 0) {
+            // 找到第一个 Entity
+            for (const obj of objects) {
+              if (obj && obj.id instanceof Cesium.Entity) {
+                pickedObject = obj;
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Drill pick failed:', e);
+        }
+      }
 
       if (Cesium.defined(pickedObject) && pickedObject.id instanceof Cesium.Entity) {
         const entity = pickedObject.id;

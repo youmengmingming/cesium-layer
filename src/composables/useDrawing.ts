@@ -104,7 +104,7 @@ export function useDrawing() {
       return null;
     }
 
-    return layerStore.createEntityInLayer(layerId, {
+    const entity = layerStore.createEntityInLayer(layerId, {
       id: `polyline-${Date.now()}`,
       name: '标绘线',
       polyline: {
@@ -112,8 +112,14 @@ export function useDrawing() {
         width: 3,
         material: Cesium.Color.CYAN,
         clampToGround: true,
+        allowPicking: true,
       },
     });
+    // 确保实体可以被拾取
+    if (entity.polyline) {
+      entity.polyline.allowPicking = true;
+    }
+    return entity;
   };
 
   /**
@@ -124,7 +130,7 @@ export function useDrawing() {
       return null;
     }
 
-    return layerStore.createEntityInLayer(layerId, {
+    const entity = layerStore.createEntityInLayer(layerId, {
       id: `polygon-${Date.now()}`,
       name: '标绘面',
       polygon: {
@@ -134,15 +140,21 @@ export function useDrawing() {
         outlineColor: Cesium.Color.CYAN,
         outlineWidth: 2,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        allowPicking: true,
       },
     });
+    // 确保实体可以被拾取
+    if (entity.polygon) {
+      entity.polygon.allowPicking = true;
+    }
+    return entity;
   };
 
   /**
    * 创建矩形标绘
    */
   const drawRectangle = (layerId: string, rectangle: Cesium.Rectangle) => {
-    return layerStore.createEntityInLayer(layerId, {
+    const entity = layerStore.createEntityInLayer(layerId, {
       id: `rectangle-${Date.now()}`,
       name: '标绘矩形',
       rectangle: {
@@ -152,8 +164,14 @@ export function useDrawing() {
         outlineColor: Cesium.Color.BLUE,
         outlineWidth: 2,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        allowPicking: true,
       },
     });
+    // 确保实体可以被拾取
+    if (entity.rectangle) {
+      entity.rectangle.allowPicking = true;
+    }
+    return entity;
   };
 
   /**
@@ -264,9 +282,10 @@ export function useDrawing() {
       state.value.activeEntity = viewer.entities.add({
         polyline: {
           positions: positions,
-          width: 3,
-          material: Cesium.Color.CYAN,
+          width: 4,
+          material: Cesium.Color.YELLOW,
           clampToGround: true,
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, Number.MAX_VALUE),
         },
       });
     }
@@ -340,10 +359,10 @@ export function useDrawing() {
       state.value.activeEntity = viewer.entities.add({
         polygon: {
           hierarchy: [...positions, positions[0]],
-          material: Cesium.Color.CYAN.withAlpha(0.5),
+          material: Cesium.Color.YELLOW.withAlpha(0.6),
           outline: true,
-          outlineColor: Cesium.Color.CYAN,
-          outlineWidth: 2,
+          outlineColor: Cesium.Color.YELLOW,
+          outlineWidth: 3,
           heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
         },
       });
@@ -351,8 +370,8 @@ export function useDrawing() {
       state.value.activeEntity = viewer.entities.add({
         polyline: {
           positions: positions,
-          width: 2,
-          material: Cesium.Color.CYAN,
+          width: 3,
+          material: Cesium.Color.YELLOW,
           clampToGround: true,
         },
       });
@@ -423,10 +442,10 @@ export function useDrawing() {
           state.value.activeEntity = viewer.entities.add({
             rectangle: {
               coordinates: rectangle,
-              material: Cesium.Color.BLUE.withAlpha(0.5),
+              material: Cesium.Color.YELLOW.withAlpha(0.6),
               outline: true,
-              outlineColor: Cesium.Color.BLUE,
-              outlineWidth: 2,
+              outlineColor: Cesium.Color.YELLOW,
+              outlineWidth: 3,
               heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             },
           });

@@ -34,6 +34,8 @@ import { useWindowBridge } from '../composables/useWindowBridge';
 import { useCesiumViewer } from '../composables/useCesiumViewer';
 import { useEntitySelection } from '../composables/useEntitySelection';
 import { useWidgetManager } from '../composables/useWidgetManager';
+import { useWidgetStore } from '../stores/widgets';
+import { useLayerStore } from '../stores/layers';
 import EntityEditorPanel from './EntityEditorPanel.vue';
 
 interface Props {
@@ -64,6 +66,7 @@ const {
   selectedEntity,
   initEntitySelection,
   deselectEntity,
+  selectEntity,
 } = useEntitySelection();
 
 const { openWidget, closeWidget } = useWidgetManager();
@@ -87,27 +90,69 @@ const bootViewer = async () => {
   await initViewer(configRef.value || {});
   
   // 等待 viewer 完全初始化后再设置实体选择
-  if (viewer.value) {
-    // 使用 nextTick 确保 viewer 完全准备好
+  // 增加重试机制，确保 viewer 已初始化
+  let retries = 0;
+  while (!viewer.value && retries < 10) {
     await new Promise((resolve) => setTimeout(resolve, 100));
+    retries++;
+  }
+  
+  if (!viewer.value) {
+    console.error('Failed to initialize Cesium viewer');
+    return;
+  }
+  
+  // 使用 nextTick 确保 viewer 完全准备好
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  
+  // 禁用 Cesium 默认的选中行为
+  try {
+    if (viewer.value) {
+      viewer.value.selectedEntity = undefined;
+    }
+  } catch (e) {
+    console.warn('Failed to set selectedEntity:', e);
+  }
+  
+  // 清理之前的 handler
+  if (selectionHandler) {
+    selectionHandler.destroy();
+    selectionHandler = null;
+  }
+  
+  // 初始化自定义实体选择
+  try {
+    selectionHandler = initEntitySelection();
+  } catch (e) {
+    console.error('Failed to initialize entity selection:', e);
+    return;
+  }
+  
+  // 监听双击事件
+  if (viewer.value && viewer.value.cesiumWidget && viewer.value.cesiumWidget.canvas) {
+    const canvas = viewer.value.cesiumWidget.canvas;
     
-    // 禁用 Cesium 默认的选中行为
-    viewer.value.selectedEntity = undefined;
-    
-    // 清理之前的 handler
-    if (selectionHandler) {
-      selectionHandler.destroy();
-      selectionHandler = null;
+    // 移除旧的事件监听器
+    if (doubleClickHandler) {
+      canvas.removeEventListener('entity-double-click', doubleClickHandler);
     }
     
-    // 初始化自定义实体选择
-    selectionHandler = initEntitySelection();
-    
-    // 监听双击事件
-    const canvas = viewer.value.cesiumWidget.canvas;
     doubleClickHandler = (event: any) => {
+      console.log('Double click event received:', event);
       if (event.detail?.entity) {
-        openEntityEditor(event.detail);
+        const entity = event.detail.entity;
+        console.log('Double clicked entity:', entity);
+        
+        // 确保实体已被选择，这样 selectedEntity 会有正确的值
+        selectEntity(entity);
+        
+        // 等待 selectedEntity 更新
+        setTimeout(() => {
+          console.log('Selected entity:', selectedEntity.value);
+          openEntityEditor({ entity });
+        }, 100);
+      } else {
+        console.warn('Double click event missing entity:', event);
       }
     };
     canvas.addEventListener('entity-double-click', doubleClickHandler);
@@ -125,18 +170,79 @@ onMounted(async () => {
   await bootViewer();
 });
 
-const openEntityEditor = (entityInfo: any) => {
+const openEntityEditor = (eventDetail: any) => {
   // 如果编辑器窗口已打开，先关闭
   if (editorWindowId.value) {
     closeWidget(editorWindowId.value);
   }
   
-  // 打开新的编辑器窗口
-  editorWindowId.value = openWidget({
+  // 获取实体信息
+  const entity = eventDetail?.entity;
+  if (!entity) {
+    console.warn('openEntityEditor: entity is missing', eventDetail);
+    return;
+  }
+  
+  console.log('Opening editor for entity:', entity);
+  console.log('Entity ID (before):', entity.id);
+  console.log('Entity name:', entity.name);
+  
+  // 确保实体有 ID
+  let entityId = entity.id;
+  if (!entityId) {
+    // 生成一个唯一的 ID
+    entityId = `entity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    entity.id = entityId;
+    console.log('Generated new entity ID:', entityId);
+  }
+  
+  // 尝试从 selectedEntity 获取图层信息
+  let layerId: string | null = null;
+  const currentSelected = selectedEntity.value;
+  
+  if (currentSelected && currentSelected.entity === entity) {
+    // 使用已选择的实体信息
+    layerId = currentSelected.layerId;
+    console.log('Using layerId from selectedEntity:', layerId);
+  } else {
+    // 尝试查找实体所属的图层
+    const layerStore = useLayerStore();
+    for (const lid in layerStore.layers) {
+      const layer = layerStore.layers[lid];
+      for (const eid in layer.entities) {
+        if (layer.entities[eid] === entity) {
+          layerId = lid;
+          console.log('Found entity in layer:', layerId);
+          break;
+        }
+      }
+      if (layerId) break;
+    }
+    
+    if (!layerId) {
+      console.log('Entity not found in any layer, layerId will be null');
+    }
+  }
+  
+  console.log('Final entityId:', entityId);
+  console.log('Final layerId:', layerId);
+  console.log('Entity properties:', {
+    point: !!entity.point,
+    polyline: !!entity.polyline,
+    polygon: !!entity.polygon,
+    rectangle: !!entity.rectangle,
+    ellipse: !!entity.ellipse,
+  });
+  
+  // 打开新的编辑器窗口，只传递可序列化的数据
+  const widgetId = openWidget({
     component: EntityEditorPanel,
-    title: '实体属性编辑器',
+    title: `实体属性编辑器 - ${entity.name || entityId || '未命名'}`,
     props: {
-      entityInfo: entityInfo,
+      // 只传递可序列化的数据，不传递 Cesium.Entity 对象
+      entityId: entityId,
+      layerId: layerId,
+      entityName: entity.name,
     },
     events: {
       close: () => {
@@ -153,6 +259,10 @@ const openEntityEditor = (entityInfo: any) => {
     x: (window.innerWidth - 450) / 2,
     y: 100,
   });
+  
+  editorWindowId.value = widgetId;
+  
+  console.log('CesiumMap: Widget created with entityId:', entityId, 'layerId:', layerId);
 };
 
 onUnmounted(() => {

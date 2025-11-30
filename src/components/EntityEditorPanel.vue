@@ -1,10 +1,16 @@
 <template>
-  <div v-if="entityInfo" class="entity-editor-panel">
+  <div class="entity-editor-panel">
+    <div v-if="!entityInfo || !entityInfo.entity" class="entity-editor-panel__error">
+      <p>无法加载实体信息</p>
+      <p v-if="!entityInfo">entityInfo 为空</p>
+      <p v-else-if="!entityInfo.entity">entityInfo.entity 为空</p>
+      <p>实体 ID: {{ props.entityId || '未提供' }}</p>
+      <p>图层 ID: {{ props.layerId || '未提供' }}</p>
+      <pre>{{ JSON.stringify({ entityInfo: entityInfo ? 'exists' : 'null', hasEntity: entityInfo?.entity ? 'yes' : 'no', entityId: props.entityId }, null, 2) }}</pre>
+    </div>
+    <div v-else>
     <div class="entity-editor-panel__header">
       <h3>实体属性</h3>
-      <button class="entity-editor-panel__close" type="button" @click="handleClose">
-        ✕
-      </button>
     </div>
 
     <div class="entity-editor-panel__content">
@@ -230,6 +236,7 @@
         </button>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -241,7 +248,11 @@ import { useLayerStore } from '../stores/layers';
 import type { EntityInfo } from '../composables/useEntitySelection';
 
 interface Props {
-  entityInfo: EntityInfo | null;
+  entityInfo?: EntityInfo | null;
+  // 新的 props：通过 ID 传递
+  entityId?: string;
+  layerId?: string | null;
+  entityName?: string;
 }
 
 interface Emits {
@@ -252,8 +263,94 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
+// 初始化 stores（必须在函数定义之前）
 const cesiumStore = useCesiumStore();
 const layerStore = useLayerStore();
+
+// 从 viewer 中获取实体的响应式引用
+const entityInfo = ref<EntityInfo | null>(null);
+
+// 调试：检查 props
+console.log('EntityEditorPanel: defineProps called');
+console.log('EntityEditorPanel: props:', props);
+console.log('EntityEditorPanel: props.entityInfo:', props.entityInfo);
+console.log('EntityEditorPanel: props.entityId:', props.entityId);
+console.log('EntityEditorPanel: props.layerId:', props.layerId);
+
+/**
+ * 通过实体 ID 从 viewer 中获取实体
+ */
+const loadEntityById = () => {
+  const viewer = cesiumStore.getViewer;
+  if (!viewer) {
+    console.warn('EntityEditorPanel: viewer is not available');
+    return;
+  }
+
+  // 优先使用新的 props 方式（通过 ID）
+  if (props.entityId) {
+    console.log('EntityEditorPanel: Loading entity by ID:', props.entityId);
+    
+    // 从 viewer.entities 中查找实体
+    let entity: Cesium.Entity | undefined;
+    
+    // 方法1：通过 ID 查找
+    viewer.entities.values.forEach((e) => {
+      if (e.id === props.entityId) {
+        entity = e;
+      }
+    });
+    
+    // 方法2：如果找不到，尝试从图层中查找
+    if (!entity && props.layerId) {
+      const layer = layerStore.layers[props.layerId];
+      if (layer && layer.entities[props.entityId]) {
+        entity = layer.entities[props.entityId];
+      }
+    }
+    
+    if (entity) {
+      entityInfo.value = {
+        entity: entity,
+        layerId: props.layerId || null,
+        entityId: props.entityId,
+      };
+      console.log('EntityEditorPanel: Entity loaded successfully:', entity);
+      console.log('EntityEditorPanel: entityInfo:', entityInfo.value);
+    } else {
+      console.error('EntityEditorPanel: Entity not found with ID:', props.entityId);
+      entityInfo.value = null;
+    }
+  } 
+  // 兼容旧的 props 方式（直接传递 entityInfo）
+  else if (props.entityInfo && props.entityInfo.entity) {
+    console.log('EntityEditorPanel: Using entityInfo from props');
+    entityInfo.value = props.entityInfo;
+  } else {
+    console.warn('EntityEditorPanel: No valid entity info provided');
+    entityInfo.value = null;
+  }
+};
+
+// 监听 props 变化
+watch(
+  () => [props.entityId, props.entityInfo],
+  () => {
+    loadEntityById();
+  },
+  { immediate: true }
+);
+
+// 监听 viewer 初始化
+watch(
+  () => cesiumStore.getViewer,
+  (viewer) => {
+    if (viewer && (props.entityId || props.entityInfo)) {
+      loadEntityById();
+    }
+  },
+  { immediate: true }
+);
 
 const formData = ref({
   name: '',
@@ -321,15 +418,24 @@ const cesiumToColor = (color: Cesium.Color): string => {
  * 加载实体属性到表单
  */
 const loadEntityProperties = () => {
-  if (!props.entityInfo) {
+  if (!entityInfo.value) {
+    console.warn('loadEntityProperties: entityInfo is null');
     return;
   }
 
-  const entity = props.entityInfo.entity;
-  const viewer = cesiumStore.getViewer;
-  if (!viewer) {
+  const entity = entityInfo.value.entity;
+  if (!entity) {
+    console.warn('loadEntityProperties: entity is missing');
     return;
   }
+  
+  const viewer = cesiumStore.getViewer;
+  if (!viewer) {
+    console.warn('loadEntityProperties: viewer is not available');
+    return;
+  }
+  
+  console.log('Loading entity properties:', entity);
 
   try {
     formData.value.name = entity.name || '';
@@ -614,11 +720,11 @@ const loadEntityProperties = () => {
  * 保存实体属性
  */
 const handleSave = () => {
-  if (!props.entityInfo) {
+  if (!entityInfo.value) {
     return;
   }
 
-  const entity = props.entityInfo.entity;
+  const entity = entityInfo.value.entity;
   const viewer = cesiumStore.getViewer;
   if (!viewer) {
     return;
@@ -679,22 +785,22 @@ const handleSave = () => {
  * 删除实体
  */
 const handleDelete = () => {
-  if (!props.entityInfo) {
+  if (!entityInfo.value) {
     return;
   }
 
   if (confirm('确定要删除这个实体吗？')) {
     const viewer = cesiumStore.getViewer;
     if (viewer) {
-      viewer.entities.remove(props.entityInfo.entity);
+      viewer.entities.remove(entityInfo.value.entity);
 
       // 从图层中移除
-      if (props.entityInfo.layerId) {
-        layerStore.detachEntity(props.entityInfo.layerId, props.entityInfo.entityId);
+      if (entityInfo.value.layerId) {
+        layerStore.detachEntity(entityInfo.value.layerId, entityInfo.value.entityId);
       }
     }
 
-    emit('delete', props.entityInfo.entity);
+    emit('delete', entityInfo.value.entity);
     emit('close');
   }
 };
@@ -708,102 +814,94 @@ const handleClose = () => {
 
 // 监听实体变化，重新加载属性
 watch(
-  () => props.entityInfo,
-  () => {
-    if (props.entityInfo) {
+  () => entityInfo.value,
+  (newValue) => {
+    console.log('EntityInfo changed:', newValue);
+    if (newValue && newValue.entity) {
       loadEntityProperties();
+    } else {
+      console.warn('EntityInfo is invalid:', newValue);
     }
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 );
 </script>
 
 <style scoped>
 .entity-editor-panel {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 400px;
-  max-height: 80vh;
-  padding: 20px;
-  border-radius: 12px;
-  background: rgba(17, 24, 39, 0.95);
-  color: #fff;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
-  z-index: 1000;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  background: #fafafa;
+  color: #333;
   overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .entity-editor-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e8e8e8;
+  flex-shrink: 0;
 }
 
 .entity-editor-panel__header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
-}
-
-.entity-editor-panel__close {
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.entity-editor-panel__close:hover {
-  background: rgba(255, 255, 255, 0.2);
+  color: #1a1a1a;
+  letter-spacing: -0.3px;
 }
 
 .entity-editor-panel__content {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
+  min-height: 0;
 }
 
 .entity-editor-panel__section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .entity-editor-panel__label {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #666;
   font-weight: 500;
+  letter-spacing: 0.2px;
 }
 
 .entity-editor-panel__input,
 .entity-editor-panel__textarea {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #d0d0d0;
+  background: #fff;
+  color: #1a1a1a;
   font-size: 14px;
   font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.entity-editor-panel__input:hover,
+.entity-editor-panel__textarea:hover {
+  border-color: #b0b0b0;
 }
 
 .entity-editor-panel__input:focus,
 .entity-editor-panel__textarea:focus {
   outline: none;
-  border-color: #3d82ff;
-  background: rgba(255, 255, 255, 0.15);
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+  background: #fff;
 }
 
 .entity-editor-panel__textarea {
@@ -832,7 +930,7 @@ watch(
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: #ccc;
   transition: 0.2s;
   border-radius: 24px;
 }
@@ -850,7 +948,7 @@ watch(
 }
 
 input:checked + .slider {
-  background-color: #3d82ff;
+  background-color: #667eea;
 }
 
 input:checked + .slider:before {
@@ -860,38 +958,76 @@ input:checked + .slider:before {
 .entity-editor-panel__actions {
   display: flex;
   gap: 12px;
-  margin-top: 8px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e8e8e8;
+  flex-shrink: 0;
 }
 
 .entity-editor-panel__button {
   flex: 1;
-  padding: 10px 16px;
+  padding: 12px 20px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
 }
 
 .entity-editor-panel__button--save {
-  background: #3d82ff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
 }
 
 .entity-editor-panel__button--save:hover {
-  background: #2f6ddb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.35);
+}
+
+.entity-editor-panel__button--save:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
 }
 
 .entity-editor-panel__button--delete {
-  background: rgba(239, 68, 68, 0.8);
+  background: #ef4444;
   color: #fff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
 }
 
 .entity-editor-panel__button--delete:hover {
-  background: rgba(239, 68, 68, 1);
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+}
+
+.entity-editor-panel__button--delete:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
+.entity-editor-panel__error {
+  padding: 40px 20px;
+  text-align: center;
+  color: #666;
+}
+
+.entity-editor-panel__error p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.entity-editor-panel__error pre {
+  margin-top: 20px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  text-align: left;
+  font-size: 12px;
+  overflow-x: auto;
 }
 </style>
 

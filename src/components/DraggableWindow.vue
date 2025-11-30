@@ -65,8 +65,8 @@
       <div class="window-content" :style="contentStyle">
         <component
           :is="component"
-          v-bind="props"
-          v-on="events"
+          v-bind="props.props || {}"
+          v-on="props.events || {}"
         />
       </div>
     </div>
@@ -162,10 +162,12 @@ const contentStyle = computed(() => {
   if (isMaximized.value) {
     return {
       height: `calc(100vh - ${HEADER_HEIGHT}px - 40px)`, // 减去标题栏高度和窗口标题栏高度
+      minHeight: `calc(100vh - ${HEADER_HEIGHT}px - 40px)`,
     };
   }
   return {
     height: `${size.value.height - 40}px`,
+    minHeight: `${size.value.height - 40}px`,
   };
 });
 
@@ -240,6 +242,29 @@ onMounted(() => {
   window.addEventListener('resize', handleResize);
   // 更新 store 中的 zIndex
   widgetStore.updateWidget(props.id, { zIndex: props.zIndex });
+  // 调试：检查 props 传递
+  console.log('DraggableWindow mounted:', {
+    id: props.id,
+    title: props.title,
+    props: props.props,
+    'props.entityId': props.props?.entityId,
+    'props.layerId': props.props?.layerId,
+    'props.entityName': props.props?.entityName,
+    component: props.component,
+  });
+  
+  // 验证 props 是否正确传递
+  if (!props.props) {
+    console.error('DraggableWindow: props.props is missing!');
+  } else {
+    console.log('DraggableWindow: props.props.entityId:', props.props.entityId);
+    console.log('DraggableWindow: props.props.layerId:', props.props.layerId);
+    console.log('DraggableWindow: props.props.entityName:', props.props.entityName);
+    
+    if (!props.props.entityId) {
+      console.warn('DraggableWindow: entityId is missing in props!');
+    }
+  }
 });
 
 onUnmounted(() => {
@@ -320,9 +345,13 @@ onUnmounted(() => {
 
 .window-content {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   padding: 0;
   background: #fff;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
 }
 
 .minimized-window {
