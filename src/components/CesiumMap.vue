@@ -165,9 +165,23 @@ const handleOpenSecondary = () => {
   }
 };
 
+// 处理全屏和窗口大小变化
+const handleResize = () => {
+  if (viewer.value) {
+    viewer.value.resize();
+  }
+};
+
 onMounted(async () => {
   initWindowBridge();
   await bootViewer();
+  
+  // 监听全屏变化和窗口大小变化
+  document.addEventListener('fullscreenchange', handleResize);
+  document.addEventListener('webkitfullscreenchange', handleResize);
+  document.addEventListener('mozfullscreenchange', handleResize);
+  document.addEventListener('MSFullscreenChange', handleResize);
+  window.addEventListener('resize', handleResize);
 });
 
 const openEntityEditor = (eventDetail: any) => {
@@ -274,6 +288,14 @@ onUnmounted(() => {
     viewer.value.cesiumWidget.canvas.removeEventListener('entity-double-click', doubleClickHandler);
     doubleClickHandler = null;
   }
+  
+  // 移除事件监听器
+  document.removeEventListener('fullscreenchange', handleResize);
+  document.removeEventListener('webkitfullscreenchange', handleResize);
+  document.removeEventListener('mozfullscreenchange', handleResize);
+  document.removeEventListener('MSFullscreenChange', handleResize);
+  window.removeEventListener('resize', handleResize);
+  
   destroyViewer();
 });
 
@@ -289,6 +311,8 @@ watch(
 <style scoped>
 .cesium-map-wrapper {
   position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .cesium-map-container {
@@ -297,6 +321,7 @@ watch(
   margin: 0;
   padding: 0;
   overflow: hidden;
+  min-height: 0; /* 确保可以正确收缩 */
 }
 
 .window-bridge-panel {

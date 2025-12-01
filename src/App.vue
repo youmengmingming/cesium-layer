@@ -63,6 +63,12 @@ const widgets = computed(() => widgetStore.getWidgets);
   box-sizing: border-box;
 }
 
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 #app {
   width: 100%;
   height: 100vh;
@@ -78,12 +84,13 @@ const widgets = computed(() => widgetStore.getWidgets);
   flex-direction: column;
   overflow: hidden;
   padding-top: 60px; /* 为固定定位的标题栏留出空间 */
+  box-sizing: border-box; /* 确保 padding 包含在高度内 */
 }
 
 .map-container {
-  flex: 1;
+  flex: 1 1 auto; /* 允许 flex 子元素增长和收缩 */
   width: 100%;
-  height: 100%;
+  min-height: 0; /* 确保 flex 子元素可以正确收缩 */
   position: relative;
   overflow: hidden;
 }
