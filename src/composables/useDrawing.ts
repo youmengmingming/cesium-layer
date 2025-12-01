@@ -2,8 +2,33 @@ import { ref, computed, onUnmounted } from 'vue';
 import * as Cesium from 'cesium';
 import { useCesiumStore } from '../stores/cesium';
 import { useLayerStore } from '../stores/layers';
+import type { EntityConfig } from '../utils/layerImportExport';
 
 export type DrawingType = 'point' | 'polyline' | 'polygon' | 'rectangle' | 'circle' | null;
+
+/**
+ * 将十六进制颜色字符串转换为Cesium Color
+ */
+function hexToCesiumColor(hex: string, alpha?: number): Cesium.Color {
+  const hexClean = hex.replace('#', '');
+  let r: number, g: number, b: number, a: number;
+  
+  if (hexClean.length === 8) {
+    r = parseInt(hexClean.substring(0, 2), 16);
+    g = parseInt(hexClean.substring(2, 4), 16);
+    b = parseInt(hexClean.substring(4, 6), 16);
+    a = parseInt(hexClean.substring(6, 8), 16);
+  } else if (hexClean.length === 6) {
+    r = parseInt(hexClean.substring(0, 2), 16);
+    g = parseInt(hexClean.substring(2, 4), 16);
+    b = parseInt(hexClean.substring(4, 6), 16);
+    a = alpha !== undefined ? Math.round(alpha * 255) : 255;
+  } else {
+    throw new Error(`Invalid hex color format: ${hex}`);
+  }
+  
+  return Cesium.Color.fromBytes(r, g, b, a);
+}
 
 interface DrawingState {
   activeType: DrawingType;
@@ -66,25 +91,36 @@ export function useDrawing() {
   /**
    * 创建点标绘
    */
-  const drawPoint = (layerId: string, position: Cesium.Cartesian3) => {
+  const drawPoint = (layerId: string, position: Cesium.Cartesian3, config?: EntityConfig) => {
     const viewer = getViewer();
     const cartographic = Cesium.Cartographic.fromCartesian(position);
     const longitude = Cesium.Math.toDegrees(cartographic.longitude);
     const latitude = Cesium.Math.toDegrees(cartographic.latitude);
 
+    const pointColor = config?.fillColor 
+      ? hexToCesiumColor(config.fillColor, config.fillColorAlpha)
+      : Cesium.Color.YELLOW;
+    const outlineColor = config?.outlineColor
+      ? hexToCesiumColor(config.outlineColor, config.outlineColorAlpha)
+      : Cesium.Color.BLACK;
+
+    const labelText = config?.showPropertyName && config?.propertyName
+      ? config.propertyName
+      : `(${longitude.toFixed(6)}, ${latitude.toFixed(6)})`;
+
     return layerStore.createEntityInLayer(layerId, {
       id: `point-${Date.now()}`,
-      name: '标绘点',
+      name: config?.propertyName || '标绘点',
       position: position,
       point: {
-        pixelSize: 10,
-        color: Cesium.Color.YELLOW,
-        outlineColor: Cesium.Color.BLACK,
-        outlineWidth: 2,
+        pixelSize: config?.lineWidth || 10,
+        color: pointColor,
+        outlineColor: outlineColor,
+        outlineWidth: config?.outlineWidth ?? 2,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
       },
-      label: {
-        text: `(${longitude.toFixed(6)}, ${latitude.toFixed(6)})`,
+      label: config?.showPropertyName || config?.showLengthInfo ? {
+        text: labelText,
         font: '12px sans-serif',
         fillColor: Cesium.Color.WHITE,
         outlineColor: Cesium.Color.BLACK,
@@ -92,105 +128,120 @@ export function useDrawing() {
         style: Cesium.LabelStyle.FILL_AND_OUTLINE,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         pixelOffset: new Cesium.Cartesian2(0, -25),
-      },
+      } : undefined,
+      _config: config,
     });
   };
 
   /**
    * 创建折线标绘
    */
-  const drawPolyline = (layerId: string, positions: Cesium.Cartesian3[]) => {
+  const drawPolyline = (layerId: string, positions: Cesium.Cartesian3[], config?: EntityConfig) => {
     if (positions.length < 2) {
       return null;
     }
 
+    const lineColor = config?.lineColor
+      ? hexToCesiumColor(config.lineColor, config.lineColorAlpha)
+      : Cesium.Color.CYAN;
+
     const entity = layerStore.createEntityInLayer(layerId, {
       id: `polyline-${Date.now()}`,
-      name: '标绘线',
+      name: config?.propertyName || '标绘线',
       polyline: {
         positions: positions,
-        width: 3,
-        material: Cesium.Color.CYAN,
+        width: config?.lineWidth ?? 3,
+        material: lineColor,
         clampToGround: true,
-        allowPicking: true,
       },
+      _config: config,
     });
-    // 确保实体可以被拾取
-    if (entity.polyline) {
-      entity.polyline.allowPicking = true;
-    }
     return entity;
   };
 
   /**
    * 创建多边形标绘
    */
-  const drawPolygon = (layerId: string, positions: Cesium.Cartesian3[]) => {
+  const drawPolygon = (layerId: string, positions: Cesium.Cartesian3[], config?: EntityConfig) => {
     if (positions.length < 3) {
       return null;
     }
 
+    const fillColor = config?.fillColor
+      ? hexToCesiumColor(config.fillColor, config.fillColorAlpha ?? 0.5)
+      : Cesium.Color.CYAN.withAlpha(0.5);
+    const outlineColor = config?.outlineColor
+      ? hexToCesiumColor(config.outlineColor, config.outlineColorAlpha)
+      : Cesium.Color.CYAN;
+
     const entity = layerStore.createEntityInLayer(layerId, {
       id: `polygon-${Date.now()}`,
-      name: '标绘面',
+      name: config?.propertyName || '标绘面',
       polygon: {
         hierarchy: positions,
-        material: Cesium.Color.CYAN.withAlpha(0.5),
-        outline: true,
-        outlineColor: Cesium.Color.CYAN,
-        outlineWidth: 2,
+        material: fillColor,
+        outline: config?.showBorder ?? config?.outline ?? true,
+        outlineColor: outlineColor,
+        outlineWidth: config?.outlineWidth ?? 2,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-        allowPicking: true,
       },
+      _config: config,
     });
-    // 确保实体可以被拾取
-    if (entity.polygon) {
-      entity.polygon.allowPicking = true;
-    }
     return entity;
   };
 
   /**
    * 创建矩形标绘
    */
-  const drawRectangle = (layerId: string, rectangle: Cesium.Rectangle) => {
+  const drawRectangle = (layerId: string, rectangle: Cesium.Rectangle, config?: EntityConfig) => {
+    const fillColor = config?.fillColor
+      ? hexToCesiumColor(config.fillColor, config.fillColorAlpha ?? 0.5)
+      : Cesium.Color.BLUE.withAlpha(0.5);
+    const outlineColor = config?.outlineColor
+      ? hexToCesiumColor(config.outlineColor, config.outlineColorAlpha)
+      : Cesium.Color.BLUE;
+
     const entity = layerStore.createEntityInLayer(layerId, {
       id: `rectangle-${Date.now()}`,
-      name: '标绘矩形',
+      name: config?.propertyName || '标绘矩形',
       rectangle: {
         coordinates: rectangle,
-        material: Cesium.Color.BLUE.withAlpha(0.5),
-        outline: true,
-        outlineColor: Cesium.Color.BLUE,
-        outlineWidth: 2,
+        material: fillColor,
+        outline: config?.showBorder ?? config?.outline ?? true,
+        outlineColor: outlineColor,
+        outlineWidth: config?.outlineWidth ?? 2,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-        allowPicking: true,
       },
+      _config: config,
     });
-    // 确保实体可以被拾取
-    if (entity.rectangle) {
-      entity.rectangle.allowPicking = true;
-    }
     return entity;
   };
 
   /**
    * 创建圆形标绘
    */
-  const drawCircle = (layerId: string, center: Cesium.Cartesian3, radius: number) => {
+  const drawCircle = (layerId: string, center: Cesium.Cartesian3, radius: number, config?: EntityConfig) => {
+    const fillColor = config?.fillColor
+      ? hexToCesiumColor(config.fillColor, config.fillColorAlpha ?? 0.5)
+      : Cesium.Color.GREEN.withAlpha(0.5);
+    const outlineColor = config?.outlineColor
+      ? hexToCesiumColor(config.outlineColor, config.outlineColorAlpha)
+      : Cesium.Color.GREEN;
+
     return layerStore.createEntityInLayer(layerId, {
       id: `circle-${Date.now()}`,
-      name: '标绘圆',
+      name: config?.propertyName || '标绘圆',
       position: center,
       ellipse: {
         semiMajorAxis: radius,
         semiMinorAxis: radius,
-        material: Cesium.Color.GREEN.withAlpha(0.5),
-        outline: true,
-        outlineColor: Cesium.Color.GREEN,
-        outlineWidth: 2,
+        material: fillColor,
+        outline: config?.showBorder ?? config?.outline ?? true,
+        outlineColor: outlineColor,
+        outlineWidth: config?.outlineWidth ?? 2,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
       },
+      _config: config,
     });
   };
 
@@ -209,7 +260,7 @@ export function useDrawing() {
     handler.setInputAction((click: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
       const cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
       if (cartesian) {
-        drawPoint(layerId, cartesian);
+        drawPoint(layerId, cartesian, (state.value as any).config);
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
   };
@@ -250,7 +301,7 @@ export function useDrawing() {
           viewer.entities.remove(state.value.activeEntity);
           state.value.activeEntity = null;
         }
-        drawPolyline(layerId, state.value.positions);
+        drawPolyline(layerId, state.value.positions, (state.value as any).config);
       }
       stopDrawing();
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
@@ -327,7 +378,7 @@ export function useDrawing() {
           viewer.entities.remove(state.value.activeEntity);
           state.value.activeEntity = null;
         }
-        drawPolygon(layerId, state.value.positions);
+        drawPolygon(layerId, state.value.positions, (state.value as any).config);
       }
       stopDrawing();
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
@@ -463,7 +514,7 @@ export function useDrawing() {
         if (rectangle) {
           viewer.entities.remove(state.value.activeEntity);
           state.value.activeEntity = null;
-          drawRectangle(layerId, rectangle);
+          drawRectangle(layerId, rectangle, (state.value as any).config);
         }
       }
       stopDrawing();
@@ -534,7 +585,7 @@ export function useDrawing() {
 
           viewer.entities.remove(state.value.activeEntity);
           state.value.activeEntity = null;
-          drawCircle(layerId, center, radius);
+          drawCircle(layerId, center, radius, (state.value as any).config);
         }
       }
       stopDrawing();
@@ -544,7 +595,10 @@ export function useDrawing() {
   /**
    * 开始标绘（统一入口）
    */
-  const startDrawing = (type: DrawingType, layerId: string) => {
+  const startDrawing = (type: DrawingType, layerId: string, config?: EntityConfig) => {
+    // 保存配置到state中，供后续使用
+    (state.value as any).config = config;
+    
     switch (type) {
       case 'point':
         startPointDrawing(layerId);
@@ -576,6 +630,13 @@ export function useDrawing() {
     isDrawing,
     startDrawing,
     stopDrawing,
+    drawPoint,
+    drawPolyline,
+    drawPolygon,
+    drawRectangle,
+    drawCircle,
   };
 }
+
+export type { EntityConfig };
 

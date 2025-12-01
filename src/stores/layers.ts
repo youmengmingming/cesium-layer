@@ -1,6 +1,14 @@
 import { defineStore } from 'pinia';
 import * as Cesium from 'cesium';
 import { useCesiumStore } from './cesium';
+import {
+  exportLayers,
+  exportSingleLayer,
+  importLayers,
+  importSingleLayer,
+  deserializeEntity,
+  LayerExportData,
+} from '../utils/layerImportExport';
 
 export interface LayerRecord {
   id: string;
@@ -164,7 +172,7 @@ export const useLayerStore = defineStore('layer-store', {
      * 在指定图层中创建 Entity 并自动挂接到 Cesium Viewer
      * 外部模块可以直接调用这个仓库方法来完成“往图层里加 Entity”的流程
      */
-    createEntityInLayer(layerId: string, entityOptions: Cesium.Entity.ConstructorOptions) {
+    createEntityInLayer(layerId: string, entityOptions: Cesium.Entity.ConstructorOptions & { _config?: any }) {
       const cesiumStore = useCesiumStore();
       const viewer = cesiumStore.getViewer;
 
@@ -172,7 +180,18 @@ export const useLayerStore = defineStore('layer-store', {
         throw new Error('Cesium Viewer 尚未初始化');
       }
 
-      const entity = viewer.entities.add(entityOptions);
+      // 提取配置（如果存在）
+      const config = (entityOptions as any)._config;
+      const cleanOptions = { ...entityOptions };
+      delete (cleanOptions as any)._config;
+
+      const entity = viewer.entities.add(cleanOptions);
+      
+      // 恢复配置到实体
+      if (config) {
+        (entity as any)._config = config;
+      }
+      
       this.attachEntity(layerId, entity);
       entity.show = this.layers[layerId]?.visible ?? true;
       return entity;
@@ -199,6 +218,141 @@ export const useLayerStore = defineStore('layer-store', {
     reset() {
       this.layers = {};
       this.layerOrder = [];
+    },
+
+    /**
+     * 导出所有图层数据
+     */
+    exportAllLayers(): LayerExportData {
+      return exportLayers(this.layerList);
+    },
+
+    /**
+     * 导出单个图层数据
+     */
+    exportSingleLayer(layerId: string): LayerExportData | null {
+      const layer = this.layers[layerId];
+      if (!layer) {
+        return null;
+      }
+      return exportSingleLayer(layer);
+    },
+
+    /**
+     * 导入图层数据
+     */
+    importLayers(data: LayerExportData, merge: boolean = false) {
+      if (!merge) {
+        // 如果不合并，先清空现有图层
+        const cesiumStore = useCesiumStore();
+        const viewer = cesiumStore.getViewer;
+        
+        // 删除所有现有图层
+        const layerIds = [...this.layerOrder];
+        layerIds.forEach((layerId) => {
+          this.removeLayerWithViewer(layerId);
+        });
+      }
+
+      const importedData = importLayers(data);
+
+      importedData.forEach(({ layer, entities }) => {
+        // 如果合并模式且ID已存在，生成新ID
+        let layerId = layer.id;
+        if (merge && this.layers[layerId]) {
+          // 生成新ID，但保留原始ID作为后缀以便识别
+          layerId = `${layer.id}-imported-${Date.now()}`;
+        }
+
+        // 创建图层
+        const newLayer = this.createLayer({
+          id: layerId,
+          name: merge && this.layers[layer.id] ? `${layer.name} (导入)` : layer.name,
+          visible: layer.visible,
+        });
+
+        // 恢复创建时间
+        if (layer.createdAt && !merge) {
+          newLayer.createdAt = layer.createdAt;
+        }
+
+        // 导入entities
+        entities.forEach((serializedEntity) => {
+          try {
+            const entityOptions = deserializeEntity(serializedEntity);
+            // 如果合并模式，为entity生成新ID以避免冲突
+            if (merge) {
+              entityOptions.id = `${serializedEntity.id}-imported-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            }
+            this.createEntityInLayer(newLayer.id, entityOptions);
+          } catch (error) {
+            console.error('导入实体失败:', serializedEntity, error);
+          }
+        });
+      });
+    },
+
+    /**
+     * 导入单个图层数据
+     */
+    importSingleLayer(data: LayerExportData, targetLayerId?: string, merge: boolean = false) {
+      const importedData = importSingleLayer(data);
+      if (!importedData) {
+        return;
+      }
+
+      const { layer, entities } = importedData;
+
+      // 如果指定了目标图层ID，则导入到该图层
+      if (targetLayerId) {
+        const targetLayer = this.layers[targetLayerId];
+        if (!targetLayer) {
+          throw new Error(`目标图层 ${targetLayerId} 不存在`);
+        }
+
+        // 导入entities到目标图层
+        entities.forEach((serializedEntity) => {
+          try {
+            const entityOptions = deserializeEntity(serializedEntity);
+            // 如果合并模式，为entity生成新ID以避免冲突
+            if (merge) {
+              entityOptions.id = `${serializedEntity.id}-imported-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            }
+            this.createEntityInLayer(targetLayerId, entityOptions);
+          } catch (error) {
+            console.error('导入实体失败:', serializedEntity, error);
+          }
+        });
+      } else {
+        // 创建新图层
+        let layerId = layer.id;
+        if (merge && this.layers[layerId]) {
+          layerId = `${layer.id}-imported-${Date.now()}`;
+        }
+
+        const newLayer = this.createLayer({
+          id: layerId,
+          name: merge && this.layers[layer.id] ? `${layer.name} (导入)` : layer.name,
+          visible: layer.visible,
+        });
+
+        if (layer.createdAt && !merge) {
+          newLayer.createdAt = layer.createdAt;
+        }
+
+        // 导入entities
+        entities.forEach((serializedEntity) => {
+          try {
+            const entityOptions = deserializeEntity(serializedEntity);
+            if (merge) {
+              entityOptions.id = `${serializedEntity.id}-imported-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            }
+            this.createEntityInLayer(newLayer.id, entityOptions);
+          } catch (error) {
+            console.error('导入实体失败:', serializedEntity, error);
+          }
+        });
+      }
     },
   },
 });
