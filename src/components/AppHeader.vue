@@ -20,6 +20,12 @@
         <span class="nav-text">图层管理</span>
       </div>
 
+      <!-- 测量工具 -->
+      <div class="nav-item" @click="openMeasurementToolbar">
+        <span class="nav-icon">📐</span>
+        <span class="nav-text">测量工具</span>
+      </div>
+
       <!-- 更多功能 -->
       <div class="nav-item nav-item--dropdown" @click="toggleMoreMenu">
         <span class="nav-icon">⚙️</span>
@@ -53,6 +59,7 @@ import { ref } from 'vue';
 import { useWidgetManager } from '../composables/useWidgetManager';
 import DrawingToolbar from './DrawingToolbar.vue';
 import LayerManager from './LayerManager.vue';
+import MeasurementToolbar from './MeasurementToolbar.vue';
 // import WidgetExample from './WidgetExample.vue';
 import ExampleWidget from './ExampleWidget.vue';
 import ThemeSwitcher from './ThemeSwitcher.vue';
@@ -86,6 +93,21 @@ const openLayerManager = () => {
     y: 120,
     minWidth: 400,
     minHeight: 500,
+  });
+};
+
+// 打开测量工具窗口
+const openMeasurementToolbar = () => {
+  openWidget({
+    id: 'measurement-toolbar',
+    component: MeasurementToolbar,
+    title: '测量工具',
+    width: 400,
+    height: 500,
+    x: 540,
+    y: 120,
+    minWidth: 350,
+    minHeight: 400,
   });
 };
 
