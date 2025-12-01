@@ -159,8 +159,8 @@ const handleCancel = () => {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  color: #333;
+  background: var(--color-background);
+  color: var(--color-text);
   overflow-y: auto;
 }
 
@@ -170,32 +170,32 @@ const handleCancel = () => {
   justify-content: space-between;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--color-border-light);
 }
 
 .drawing-toolbar__header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
 }
 
 .drawing-toolbar__cancel {
   padding: 6px 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  background: #fff;
-  color: #666;
-  font-size: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition-base);
   font-weight: 500;
 }
 
 .drawing-toolbar__cancel:hover {
-  background: #f5f5f5;
-  border-color: #d0d0d0;
-  color: #333;
+  background: var(--color-background-secondary);
+  border-color: var(--color-border-dark);
+  color: var(--color-text);
 }
 
 .drawing-toolbar__content {
@@ -212,44 +212,44 @@ const handleCancel = () => {
 }
 
 .drawing-toolbar__label {
-  font-size: 14px;
-  color: #555;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
 .drawing-toolbar__select {
   padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  background: #fff;
-  color: #333;
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition-base);
 }
 
 .drawing-toolbar__select:hover:not(:disabled) {
-  border-color: #667eea;
+  border-color: var(--color-primary);
 }
 
 .drawing-toolbar__select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .drawing-toolbar__select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: #f5f5f5;
+  background: var(--color-background-secondary);
 }
 
 .drawing-toolbar__hint {
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: #fff3cd;
   color: #856404;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   text-align: center;
   border: 1px solid #ffeaa7;
 }
@@ -266,30 +266,30 @@ const handleCancel = () => {
   align-items: center;
   gap: 6px;
   padding: 16px 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  background: #fff;
-  color: #333;
-  font-size: 13px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition-base);
   min-height: 80px;
   justify-content: center;
 }
 
 .drawing-toolbar__tool:hover:not(:disabled) {
-  background: #f8f9ff;
-  border-color: #667eea;
+  background: var(--color-background-secondary);
+  border-color: var(--color-primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 4px 12px var(--color-shadow-light);
 }
 
 .drawing-toolbar__tool.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  background: var(--color-primary-gradient);
+  border-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  box-shadow: 0 4px 16px var(--color-shadow);
 }
 
 .drawing-toolbar__tool.active .tool-icon {
@@ -299,7 +299,7 @@ const handleCancel = () => {
 .drawing-toolbar__tool:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  background: #f5f5f5;
+  background: var(--color-background-secondary);
 }
 
 .tool-icon {
@@ -310,10 +310,10 @@ const handleCancel = () => {
 
 .drawing-toolbar__tip {
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: #e3f2fd;
   color: #1976d2;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   text-align: center;
   border: 1px solid #bbdefb;
   font-weight: 500;

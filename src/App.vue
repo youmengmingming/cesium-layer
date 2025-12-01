@@ -67,6 +67,8 @@ const widgets = computed(() => widgetStore.getWidgets);
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  background: var(--color-background);
+  color: var(--color-text);
 }
 
 .app-container {

@@ -39,6 +39,7 @@
 
     <div class="app-header__right">
       <div class="app-header__actions">
+        <ThemeSwitcher />
         <button class="action-btn" @click="handleFullscreen" title="全屏">
           <span>⛶</span>
         </button>
@@ -54,6 +55,7 @@ import DrawingToolbar from './DrawingToolbar.vue';
 import LayerManager from './LayerManager.vue';
 // import WidgetExample from './WidgetExample.vue';
 import ExampleWidget from './ExampleWidget.vue';
+import ThemeSwitcher from './ThemeSwitcher.vue';
 
 const { openWidget, closeAllWidgets } = useWidgetManager();
 const showMoreMenu = ref(false);
@@ -198,14 +200,14 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   height: 60px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--color-primary-gradient);
+  color: var(--color-text-inverse);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  z-index: 10000;
+  box-shadow: 0 2px 10px var(--color-shadow-light);
+  z-index: var(--z-index-header);
   backdrop-filter: blur(10px);
 }
 
@@ -254,7 +256,7 @@ onUnmounted(() => {
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-button-hover);
   transform: translateY(-1px);
 }
 
@@ -285,13 +287,13 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  background: rgba(17, 24, 39, 0.95);
+  background: var(--color-backdrop);
   backdrop-filter: blur(10px);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 8px 0;
   min-width: 180px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  z-index: 10001;
+  box-shadow: 0 4px 20px var(--color-shadow-dark);
+  z-index: calc(var(--z-index-header) + 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -327,19 +329,19 @@ onUnmounted(() => {
   width: 36px;
   height: 36px;
   border: none;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  color: white;
+  background: var(--color-button-bg);
+  border-radius: var(--radius-md);
+  color: var(--color-text-inverse);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  transition: all 0.2s;
+  transition: var(--transition-base);
 }
 
 .action-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--color-button-hover);
   transform: scale(1.05);
 }
 

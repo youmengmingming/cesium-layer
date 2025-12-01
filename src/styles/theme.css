@@ -1,0 +1,104 @@
+/**
+ * 主题样式文件
+ * 使用CSS变量统一管理系统的样式
+ */
+
+:root {
+  /* 主色调 */
+  --color-primary: #667eea;
+  --color-primary-light: #8b9ef5;
+  --color-primary-dark: #4c63d2;
+  --color-primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  
+  /* 背景色 */
+  --color-background: #ffffff;
+  --color-background-secondary: #f5f5f5;
+  --color-background-tertiary: #f0f0f0;
+  
+  /* 文本色 */
+  --color-text: #333333;
+  --color-text-secondary: #666666;
+  --color-text-tertiary: #999999;
+  --color-text-inverse: #ffffff;
+  
+  /* 边框色 */
+  --color-border: #e0e0e0;
+  --color-border-light: #f0f0f0;
+  --color-border-dark: #d0d0d0;
+  
+  /* 状态色 */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+  
+  /* UI元素 */
+  --color-window-bg: #ffffff;
+  --color-window-header-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --color-window-header-text: #ffffff;
+  --color-button-bg: rgba(255, 255, 255, 0.15);
+  --color-button-hover: rgba(255, 255, 255, 0.25);
+  --color-button-text: #ffffff;
+  
+  /* 阴影 */
+  --color-shadow: rgba(0, 0, 0, 0.15);
+  --color-shadow-light: rgba(0, 0, 0, 0.1);
+  --color-shadow-dark: rgba(0, 0, 0, 0.3);
+  
+  /* 遮罩 */
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-backdrop: rgba(17, 24, 39, 0.95);
+  
+  /* 过渡动画 */
+  --transition-base: all 0.2s ease;
+  --transition-fast: all 0.15s ease;
+  --transition-slow: all 0.3s ease;
+  
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* 字体大小 */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  
+  /* Z-index层级 */
+  --z-index-base: 1;
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-popover: 1060;
+  --z-index-tooltip: 1070;
+  --z-index-header: 10000;
+}
+
+/* 深色主题特定样式 */
+body.theme-dark {
+  /* 可以在这里添加深色主题特定的样式覆盖 */
+}
+
+/* 蓝色主题特定样式 */
+body.theme-blue {
+  /* 可以在这里添加蓝色主题特定的样式覆盖 */
+}
+
+/* 绿色主题特定样式 */
+body.theme-green {
+  /* 可以在这里添加绿色主题特定的样式覆盖 */
+}
+

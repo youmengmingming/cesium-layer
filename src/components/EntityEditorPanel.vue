@@ -835,8 +835,8 @@ watch(
   padding: 24px;
   display: flex;
   flex-direction: column;
-  background: #fafafa;
-  color: #333;
+  background: var(--color-background-secondary);
+  color: var(--color-text);
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
@@ -845,15 +845,15 @@ watch(
 .entity-editor-panel__header {
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 2px solid #e8e8e8;
+  border-bottom: 2px solid var(--color-border-light);
   flex-shrink: 0;
 }
 
 .entity-editor-panel__header h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--font-size-xl);
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text);
   letter-spacing: -0.3px;
 }
 
@@ -873,8 +873,8 @@ watch(
 }
 
 .entity-editor-panel__label {
-  font-size: 13px;
-  color: #666;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   font-weight: 500;
   letter-spacing: 0.2px;
 }
@@ -882,26 +882,26 @@ watch(
 .entity-editor-panel__input,
 .entity-editor-panel__textarea {
   padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid #d0d0d0;
-  background: #fff;
-  color: #1a1a1a;
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-dark);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
   font-family: inherit;
-  transition: all 0.2s ease;
+  transition: var(--transition-base);
 }
 
 .entity-editor-panel__input:hover,
 .entity-editor-panel__textarea:hover {
-  border-color: #b0b0b0;
+  border-color: var(--color-border);
 }
 
 .entity-editor-panel__input:focus,
 .entity-editor-panel__textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
-  background: #fff;
+  background: var(--color-background);
 }
 
 .entity-editor-panel__textarea {
@@ -948,7 +948,7 @@ watch(
 }
 
 input:checked + .slider {
-  background-color: #667eea;
+  background-color: var(--color-primary);
 }
 
 input:checked + .slider:before {
@@ -960,7 +960,7 @@ input:checked + .slider:before {
   gap: 12px;
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid #e8e8e8;
+  border-top: 1px solid var(--color-border-light);
   flex-shrink: 0;
 }
 
@@ -968,18 +968,18 @@ input:checked + .slider:before {
   flex: 1;
   padding: 12px 20px;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-base);
   letter-spacing: 0.3px;
 }
 
 .entity-editor-panel__button--save {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+  background: var(--color-primary-gradient);
+  color: var(--color-text-inverse);
+  box-shadow: 0 2px 8px var(--color-shadow);
 }
 
 .entity-editor-panel__button--save:hover {
@@ -993,9 +993,9 @@ input:checked + .slider:before {
 }
 
 .entity-editor-panel__button--delete {
-  background: #ef4444;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+  box-shadow: 0 2px 8px var(--color-shadow);
 }
 
 .entity-editor-panel__button--delete:hover {

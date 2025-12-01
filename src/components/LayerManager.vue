@@ -114,8 +114,8 @@ const toggleLayer = (layerId: string, visible: boolean) => {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  color: #333;
+  background: var(--color-background);
+  color: var(--color-text);
   overflow-y: auto;
 }
 
@@ -125,14 +125,14 @@ const toggleLayer = (layerId: string, visible: boolean) => {
   gap: 16px;
   margin-bottom: 20px;
   padding-bottom: 20px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--color-border-light);
 }
 
 .layer-manager__header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
 }
 
 .layer-manager__form {
@@ -143,40 +143,40 @@ const toggleLayer = (layerId: string, visible: boolean) => {
 .layer-manager__input {
   flex: 1;
   padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  background: #fff;
-  color: #333;
-  font-size: 14px;
-  transition: all 0.2s;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  transition: var(--transition-base);
 }
 
 .layer-manager__input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .layer-manager__input::placeholder {
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .layer-manager__button {
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 10px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
+  background: var(--color-primary-gradient);
+  color: var(--color-text-inverse);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
-  transition: all 0.2s;
+  transition: var(--transition-base);
   white-space: nowrap;
 }
 
 .layer-manager__button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px var(--color-shadow);
 }
 
 .layer-manager__button:active {
@@ -187,11 +187,11 @@ const toggleLayer = (layerId: string, visible: boolean) => {
   margin-top: 40px;
   padding: 40px 20px;
   text-align: center;
-  font-size: 14px;
-  color: #999;
-  background: #f9f9f9;
-  border-radius: 8px;
-  border: 1px dashed #e0e0e0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
 }
 
 .layer-manager__list {
@@ -203,18 +203,18 @@ const toggleLayer = (layerId: string, visible: boolean) => {
 
 .layer-card {
   padding: 16px;
-  border-radius: 12px;
-  background: #f9f9f9;
+  border-radius: var(--radius-lg);
+  background: var(--color-background-secondary);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border: 1px solid #e0e0e0;
-  transition: all 0.2s;
+  border: 1px solid var(--color-border);
+  transition: var(--transition-base);
 }
 
 .layer-card:hover {
-  border-color: #667eea;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px var(--color-shadow-light);
 }
 
 .layer-card__header {
@@ -225,15 +225,15 @@ const toggleLayer = (layerId: string, visible: boolean) => {
 
 .layer-card__title {
   font-weight: 600;
-  font-size: 16px;
-  color: #333;
+  font-size: var(--font-size-md);
+  color: var(--color-text);
   margin: 0;
 }
 
 .layer-card__subtitle {
   margin-top: 4px;
-  font-size: 13px;
-  color: #666;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   margin: 0;
 }
 
@@ -245,13 +245,13 @@ const toggleLayer = (layerId: string, visible: boolean) => {
 
 .icon-button {
   padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-  background: #fff;
-  color: #666;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text-secondary);
   cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
+  font-size: var(--font-size-sm);
+  transition: var(--transition-base);
 }
 
 .icon-button:hover {
@@ -323,7 +323,7 @@ const toggleLayer = (layerId: string, visible: boolean) => {
 }
 
 input:checked + .slider {
-  background-color: #667eea;
+  background-color: var(--color-primary);
 }
 
 input:checked + .slider:before {

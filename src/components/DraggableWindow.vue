@@ -331,9 +331,9 @@ onUnmounted(() => {
 
 <style scoped>
 .draggable-window {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  background: var(--color-window-bg);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px var(--color-shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -346,8 +346,8 @@ onUnmounted(() => {
 
 .window-header {
   height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--color-window-header-bg);
+  color: var(--color-window-header-text);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -379,19 +379,19 @@ onUnmounted(() => {
   width: 24px;
   height: 24px;
   border: none;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  color: white;
+  background: var(--color-button-bg);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-inverse);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: var(--transition-base);
   padding: 0;
 }
 
 .control-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--color-button-hover);
 }
 
 .close-btn:hover {
@@ -402,7 +402,7 @@ onUnmounted(() => {
   flex: 1;
   overflow: hidden;
   padding: 0;
-  background: #fff;
+  background: var(--color-window-bg);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -413,19 +413,19 @@ onUnmounted(() => {
   position: fixed;
   bottom: 20px;
   left: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--color-primary-gradient);
+  color: var(--color-text-inverse);
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s;
+  box-shadow: 0 2px 10px var(--color-shadow);
+  transition: var(--transition-base);
   max-width: 200px;
 }
 
 .minimized-window:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 15px var(--color-shadow-dark);
 }
 
 .minimized-title {
@@ -449,8 +449,8 @@ onUnmounted(() => {
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
+  border: 4px solid var(--color-background-secondary);
+  border-top: 4px solid var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 12px;
@@ -463,12 +463,12 @@ onUnmounted(() => {
 
 .loading-text,
 .error-text {
-  font-size: 14px;
-  color: #666;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 .error-text {
-  color: #e74c3c;
+  color: var(--color-error);
 }
 </style>
 

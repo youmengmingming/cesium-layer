@@ -155,7 +155,7 @@ export function useCesiumViewer() {
       navigationHelpButton: false,
       animation: false,
       timeline: false,
-      fullscreenButton: true,
+      fullscreenButton: false,
       vrButton: false,
       selectionIndicator: false, // 禁用默认的选择指示器，我们使用自定义高亮
       infoBox: false, // 禁用 infoBox，避免显示默认的实体信息对话框
