@@ -5,7 +5,8 @@
       <p>点击下面的按钮来打开不同类型的窗口</p>
       
       <div class="button-group">
-        <button @click="openBasicWidget">打开基础窗口</button>
+        <button @click="openBasicWidget">打开基础窗口（立即加载）</button>
+        <button @click="openBasicWidgetLazy">打开基础窗口（懒加载）</button>
         <button @click="openWidgetWithProps">打开带属性的窗口</button>
         <button @click="openWidgetWithEvents">打开带事件的窗口</button>
         <button @click="openCustomSizeWidget">打开自定义大小窗口</button>
@@ -21,11 +22,21 @@ import ExampleWidget from './ExampleWidget.vue';
 
 const { openWidget, closeAllWidgets } = useWidgetManager();
 
-// 打开基础窗口
+// 打开基础窗口（立即加载）
 const openBasicWidget = () => {
   openWidget({
     component: ExampleWidget,
-    title: '基础窗口',
+    title: '基础窗口（立即加载）',
+    width: 400,
+    height: 300,
+  });
+};
+
+// 打开基础窗口（懒加载示例）
+const openBasicWidgetLazy = () => {
+  openWidget({
+    component: () => import('./ExampleWidget.vue'),
+    title: '基础窗口（懒加载）',
     width: 400,
     height: 300,
   });

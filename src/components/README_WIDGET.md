@@ -12,7 +12,7 @@
 
 ## 使用方法
 
-### 1. 基本用法
+### 1. 基本用法（立即加载）
 
 在任何 Vue 组件中，导入 `useWidgetManager` 并使用 `openWidget` 函数：
 
@@ -37,6 +37,59 @@ const openMyWidget = () => {
 };
 </script>
 ```
+
+### 1.1. 懒加载组件（推荐，优化性能）
+
+为了优化渲染性能，建议使用懒加载方式加载组件。系统支持三种懒加载方式：
+
+#### 方式一：使用函数返回 Promise（推荐）
+
+```typescript
+import { useWidgetManager } from '@/composables/useWidgetManager';
+
+const { openWidget } = useWidgetManager();
+
+// 懒加载组件
+const openMyWidget = () => {
+  openWidget({
+    component: () => import('./MyComponent.vue'),
+    title: '我的窗口（懒加载）',
+    width: 500,
+    height: 400,
+  });
+};
+```
+
+#### 方式二：使用组件路径字符串
+
+```typescript
+// 注意：这种方式在 Vite 中可能需要特殊配置
+openWidget({
+  component: './components/MyComponent.vue',
+  title: '我的窗口（路径懒加载）',
+  width: 500,
+  height: 400,
+});
+```
+
+#### 方式三：立即加载（传统方式）
+
+```typescript
+import MyComponent from './MyComponent.vue';
+
+openWidget({
+  component: MyComponent,  // 直接传入组件
+  title: '我的窗口（立即加载）',
+  width: 500,
+  height: 400,
+});
+```
+
+**性能优化建议：**
+- ✅ 优先使用函数形式的懒加载：`component: () => import('./Component.vue')`
+- ✅ 大型组件或很少使用的组件应该使用懒加载
+- ✅ 懒加载组件会在窗口打开时才加载，减少初始包大小
+- ⚠️ 懒加载组件在加载时会显示加载动画，加载失败会显示错误提示
 
 ### 2. 传入属性 (Props)
 
@@ -171,10 +224,30 @@ bringToFront('widget-id');
 
 查看 `src/components/ExampleWidget.vue` 和 `src/components/WidgetExample.vue` 了解完整的使用示例。
 
+## 懒加载特性
+
+### 优势
+- 🚀 **减少初始包大小**：组件只在需要时才加载
+- ⚡ **提升首屏加载速度**：初始包不包含懒加载组件
+- 💾 **节省内存**：未打开的窗口组件不会占用内存
+- 🎯 **按需加载**：用户只加载实际使用的组件
+
+### 加载状态
+- 组件加载时会显示加载动画（延迟 200ms 后显示，避免闪烁）
+- 加载失败时会显示错误提示
+- 加载超时时间为 10 秒
+
+### 兼容性
+- ✅ 完全向后兼容：原有的立即加载方式仍然可用
+- ✅ 支持混合使用：可以同时使用立即加载和懒加载组件
+- ✅ 类型安全：TypeScript 类型定义完整
+
 ## 注意事项
 
 1. 窗口组件会自动通过 `Teleport` 渲染到 `body` 元素下，确保正确的层级关系
 2. 每个窗口都有唯一的 ID，可以通过 `openWidget` 的返回值获取
 3. 窗口的 z-index 会自动管理，点击窗口会自动置顶
 4. 所有窗口状态都保存在 Pinia Store 中，支持响应式更新
+5. **懒加载组件建议**：对于大型组件或很少使用的组件，建议使用懒加载以优化性能
+6. **路径字符串懒加载**：在 Vite 中，动态路径可能需要特殊配置，建议优先使用函数形式的懒加载
 

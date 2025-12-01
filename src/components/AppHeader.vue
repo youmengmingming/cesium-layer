@@ -61,6 +61,7 @@ const showMoreMenu = ref(false);
 // 打开标绘工具窗口
 const openDrawingToolbar = () => {
   openWidget({
+    id: 'drawing-toolbar',
     component: DrawingToolbar,
     title: '标绘工具',
     width: 400,

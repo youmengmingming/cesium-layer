@@ -1,10 +1,11 @@
 import { h, type Component } from 'vue';
-import { useWidgetStore, type WidgetConfig } from '../stores/widgets';
+import { useWidgetStore, type WidgetConfig, type LazyComponent } from '../stores/widgets';
 import DraggableWindow from '../components/DraggableWindow.vue';
 
 /**
  * 窗口管理器 Composable
  * 提供 openWidget 函数来打开可拖拽窗口
+ * 支持组件懒加载，优化渲染性能
  */
 export function useWidgetManager() {
   const widgetStore = useWidgetStore();
@@ -12,6 +13,14 @@ export function useWidgetManager() {
   /**
    * 打开一个窗口
    * @param config 窗口配置
+   * @param config.component 组件，支持三种形式：
+   *   - Component: 直接传入组件（立即加载）
+   *   - () => Promise<Component>: 返回组件 Promise 的函数（懒加载）
+   *   - string: 组件路径字符串，用于动态导入（懒加载）
+   *   示例：
+   *   - 立即加载: component: MyComponent
+   *   - 懒加载函数: component: () => import('./MyComponent.vue')
+   *   - 懒加载路径: component: './components/MyComponent.vue'
    * @returns 窗口 ID
    */
   const openWidget = (config: Omit<WidgetConfig, 'id'> & { id?: string }): string => {

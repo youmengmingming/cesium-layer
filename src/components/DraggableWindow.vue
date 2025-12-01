@@ -64,7 +64,7 @@
       <!-- 窗口内容 -->
       <div class="window-content" :style="contentStyle">
         <component
-          :is="component"
+          :is="resolvedComponent"
           v-bind="props.props || {}"
           v-on="props.events || {}"
         />
@@ -85,12 +85,64 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, type Component } from 'vue';
-import { useWidgetStore } from '../stores/widgets';
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent, h, type Component } from 'vue';
+import { useWidgetStore, type LazyComponent } from '../stores/widgets';
+
+/**
+ * 将懒加载组件转换为 Vue 组件
+ */
+function resolveComponent(lazyComponent: LazyComponent): Component {
+  // 如果已经是组件，直接返回
+  if (typeof lazyComponent !== 'string' && typeof lazyComponent !== 'function') {
+    return lazyComponent as Component;
+  }
+
+  // 创建加载和错误组件
+  const loadingComponent = () => h('div', { class: 'loading-container' }, [
+    h('div', { class: 'loading-spinner' }),
+    h('div', { class: 'loading-text' }, '加载中...'),
+  ]);
+
+  const errorComponent = () => h('div', { class: 'error-container' }, [
+    h('div', { class: 'error-text' }, '组件加载失败'),
+  ]);
+
+  // 如果是字符串路径，使用动态导入
+  if (typeof lazyComponent === 'string') {
+    return defineAsyncComponent({
+      loader: () => {
+        // 尝试动态导入，如果失败则显示错误
+        try {
+          // 注意：Vite 需要静态路径，动态路径可能需要特殊处理
+          // 这里假设路径是相对于 src 目录的
+          return import(/* @vite-ignore */ lazyComponent) as Promise<{ default: Component }>;
+        } catch (error) {
+          console.error('Failed to load component:', lazyComponent, error);
+          throw error;
+        }
+      },
+      loadingComponent,
+      errorComponent,
+      delay: 200,
+      timeout: 10000,
+    }) as Component;
+  }
+
+  // 如果是函数，使用 defineAsyncComponent 包装
+  return defineAsyncComponent({
+    loader: lazyComponent as () => Promise<Component>,
+    loadingComponent,
+    errorComponent,
+    // 延迟显示加载状态的时间（ms）
+    delay: 200,
+    // 超时时间（ms）
+    timeout: 10000,
+  }) as Component;
+}
 
 interface Props {
   id: string;
-  component: Component;
+  component: LazyComponent;
   title: string;
   props?: Record<string, any>;
   events?: Record<string, (...args: any[]) => void>;
@@ -125,6 +177,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const widgetStore = useWidgetStore();
 
+// 解析懒加载组件
+const resolvedComponent = computed(() => resolveComponent(props.component));
+
 // 窗口状态
 const isDragging = ref(false);
 const isMaximized = ref(false);
@@ -140,7 +195,7 @@ const HEADER_HEIGHT = 60;
 const windowStyle = computed(() => {
   if (isMaximized.value) {
     return {
-      position: 'fixed',
+      position: 'fixed' as const,
       top: `${HEADER_HEIGHT}px`,
       left: '0',
       width: '100vw',
@@ -149,7 +204,7 @@ const windowStyle = computed(() => {
     };
   }
   return {
-    position: 'fixed',
+    position: 'fixed' as const,
     left: `${position.value.x}px`,
     top: `${position.value.y}px`,
     width: `${size.value.width}px`,
@@ -378,6 +433,42 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 懒加载状态样式 */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text,
+.error-text {
+  font-size: 14px;
+  color: #666;
+}
+
+.error-text {
+  color: #e74c3c;
 }
 </style>
 

@@ -1,9 +1,17 @@
 import { defineStore } from 'pinia';
 import { ref, type Component } from 'vue';
 
+/**
+ * 组件懒加载类型
+ * - Component: 直接传入组件（立即加载）
+ * - () => Promise<Component>: 返回组件 Promise 的函数（懒加载）
+ * - string: 组件路径字符串，用于动态导入（懒加载）
+ */
+export type LazyComponent = Component | (() => Promise<Component>) | string;
+
 export interface WidgetConfig {
   id: string;
-  component: Component;
+  component: LazyComponent;
   title: string;
   props?: Record<string, any>;
   events?: Record<string, (...args: any[]) => void>;
