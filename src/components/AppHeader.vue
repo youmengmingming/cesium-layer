@@ -20,12 +20,6 @@
         <span class="nav-text">图层管理</span>
       </div>
 
-      <!-- 窗口示例 -->
-      <div class="nav-item" @click="openWidgetExamples">
-        <span class="nav-icon">🪟</span>
-        <span class="nav-text">窗口示例</span>
-      </div>
-
       <!-- 更多功能 -->
       <div class="nav-item nav-item--dropdown" @click="toggleMoreMenu">
         <span class="nav-icon">⚙️</span>
@@ -54,11 +48,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref } from 'vue';
 import { useWidgetManager } from '../composables/useWidgetManager';
 import DrawingToolbar from './DrawingToolbar.vue';
 import LayerManager from './LayerManager.vue';
-import WidgetExample from './WidgetExample.vue';
+// import WidgetExample from './WidgetExample.vue';
 import ExampleWidget from './ExampleWidget.vue';
 
 const { openWidget, closeAllWidgets } = useWidgetManager();
@@ -92,17 +86,6 @@ const openLayerManager = () => {
   });
 };
 
-// 打开窗口示例
-const openWidgetExamples = () => {
-  openWidget({
-    component: WidgetExample,
-    title: '窗口管理器示例',
-    width: 350,
-    height: 500,
-    x: 150,
-    y: 150,
-  });
-};
 
 // 切换更多菜单
 const toggleMoreMenu = () => {

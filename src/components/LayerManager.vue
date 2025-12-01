@@ -40,14 +40,6 @@
             </button>
           </div>
         </div>
-        <div class="layer-card__footer">
-          <button type="button" class="footer-button" @click="addSampleEntity(layer.id)">
-            添加示例实体
-          </button>
-          <button type="button" class="footer-button" @click="addSamplePrimitive(layer.id)">
-            添加示例 Primitive
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -73,65 +65,6 @@ const seeded = ref(false);
 
 const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
-const addSampleEntity = (layerId: string) => {
-  if (!viewer.value) {
-    return;
-  }
-  const entityPosition = Cesium.Cartesian3.fromDegrees(
-    randomInRange(70, 130),
-    randomInRange(15, 45),
-    randomInRange(10000, 50000)
-  );
-
-  createEntityInLayer(layerId, {
-    id: `sample-entity-${Date.now()}`,
-    name: '示例实体',
-    position: entityPosition,
-    point: {
-      pixelSize: 12,
-      color: Cesium.Color.CYAN,
-      outlineColor: Cesium.Color.WHITE,
-      outlineWidth: 2,
-    },
-    label: {
-      text: '示例',
-      font: '14px sans-serif',
-      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-      outlineWidth: 2,
-      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-      pixelOffset: new Cesium.Cartesian2(0, -20),
-    },
-  });
-};
-
-const addSamplePrimitive = (layerId: string) => {
-  if (!viewer.value) {
-    return;
-  }
-  const rectangle = Cesium.Rectangle.fromDegrees(
-    randomInRange(100, 110),
-    randomInRange(20, 30),
-    randomInRange(110, 120),
-    randomInRange(30, 40)
-  );
-
-  const primitive = new Cesium.Primitive({
-    geometryInstances: new Cesium.GeometryInstance({
-      geometry: new Cesium.RectangleGeometry({
-        rectangle,
-        height: 0,
-      }),
-    }),
-    appearance: new Cesium.MaterialAppearance({
-      material: Cesium.Material.fromType('Color', {
-        color: Cesium.Color.fromRandom({ alpha: 0.5 }),
-      }),
-    }),
-  });
-
-  createPrimitiveInLayer(layerId, primitive);
-};
-
 const handleCreateLayer = () => {
   const name = newLayerName.value.trim();
   if (!name) {
@@ -155,8 +88,6 @@ const seedLayerContent = () => {
   }
   const defaultLayerId = ensureDefaultLayer();
   if (viewer.value) {
-    addSampleEntity(defaultLayerId);
-    addSamplePrimitive(defaultLayerId);
     seeded.value = true;
   }
 };

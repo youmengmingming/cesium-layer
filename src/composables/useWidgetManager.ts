@@ -28,14 +28,6 @@ export function useWidgetManager() {
     // 使用 JSON 序列化/反序列化确保可序列化
     const propsToStore = config.props ? JSON.parse(JSON.stringify(config.props)) : {};
     
-    // 调试：检查 props
-    console.log('useWidgetManager: openWidget called');
-    console.log('useWidgetManager: config.props:', config.props);
-    console.log('useWidgetManager: propsToStore:', propsToStore);
-    console.log('useWidgetManager: entityId:', propsToStore.entityId);
-    console.log('useWidgetManager: layerId:', propsToStore.layerId);
-    console.log('useWidgetManager: entityName:', propsToStore.entityName);
-    
     const widgetConfig: WidgetConfig = {
       id,
       component: config.component,
@@ -55,22 +47,7 @@ export function useWidgetManager() {
       zIndex: widgetStore.maxZIndex + 1,
     };
 
-    console.log('useWidgetManager: widgetConfig before addWidget:', widgetConfig);
-    console.log('useWidgetManager: widgetConfig.props:', widgetConfig.props);
     widgetStore.addWidget(widgetConfig);
-    
-    // 验证保存后的配置
-    const savedWidget = widgetStore.getWidgetById(id);
-    console.log('useWidgetManager: widgetConfig after addWidget:', savedWidget);
-    console.log('useWidgetManager: savedWidget.props:', savedWidget?.props);
-    if (savedWidget?.props) {
-      console.log('useWidgetManager: savedWidget.props.entityId:', savedWidget.props.entityId);
-      console.log('useWidgetManager: savedWidget.props.layerId:', savedWidget.props.layerId);
-      console.log('useWidgetManager: savedWidget.props.entityName:', savedWidget.props.entityName);
-    } else {
-      console.error('useWidgetManager: props is missing in saved widget!');
-    }
-    
     return id;
   };
 
