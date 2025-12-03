@@ -33,6 +33,8 @@
         <span class="dropdown-arrow" :class="{ open: showMoreMenu }">▼</span>
         
         <div v-if="showMoreMenu" class="dropdown-menu" @click.stop>
+          <div class="dropdown-item" @click="openEChartsExamples">📊 ECharts图表案例</div>
+          <div class="dropdown-divider"></div>
           <div class="dropdown-item" @click="openBasicWidget">基础窗口</div>
           <div class="dropdown-item" @click="openWidgetWithProps">带属性窗口</div>
           <div class="dropdown-item" @click="openWidgetWithEvents">带事件窗口</div>
@@ -62,6 +64,7 @@ import LayerManager from './LayerManager.vue';
 import MeasurementToolbar from './MeasurementToolbar.vue';
 // import WidgetExample from './WidgetExample.vue';
 import ExampleWidget from './ExampleWidget.vue';
+import EChartsExamples from './EChartsExamples.vue';
 import ThemeSwitcher from './ThemeSwitcher.vue';
 
 const { openWidget, closeAllWidgets } = useWidgetManager();
@@ -187,6 +190,21 @@ const openCustomSizeWidget = () => {
     y: 150,
     minWidth: 300,
     minHeight: 200,
+  });
+};
+
+// 打开 ECharts 图表案例窗口
+const openEChartsExamples = () => {
+  showMoreMenu.value = false;
+  openWidget({
+    component: EChartsExamples,
+    title: 'ECharts 图表案例大全',
+    width: 1000,
+    height: 700,
+    x: (window.innerWidth - 1000) / 2,
+    y: 100,
+    minWidth: 800,
+    minHeight: 600,
   });
 };
 
