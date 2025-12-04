@@ -1,14 +1,196 @@
 <template>
   <div class="entity-editor-panel">
-    <div v-if="!entityInfo || !entityInfo.entity" class="entity-editor-panel__error">
-      <p>无法加载实体信息</p>
-      <p v-if="!entityInfo">entityInfo 为空</p>
-      <p v-else-if="!entityInfo.entity">entityInfo.entity 为空</p>
-      <p>实体 ID: {{ props.entityId || '未提供' }}</p>
-      <p>图层 ID: {{ props.layerId || '未提供' }}</p>
-      <pre>{{ JSON.stringify({ entityInfo: entityInfo ? 'exists' : 'null', hasEntity: entityInfo?.entity ? 'yes' : 'no', entityId: props.entityId }, null, 2) }}</pre>
+    <!-- Primitive 编辑模式 -->
+    <div v-if="props.isPrimitive && primitiveInfo">
+      <div class="entity-editor-panel__header">
+        <h3>标绘属性</h3>
     </div>
-    <div v-else>
+
+      <div class="entity-editor-panel__content">
+        <div class="entity-editor-panel__section">
+          <label class="entity-editor-panel__label">名称</label>
+          <input
+            v-model="primitiveFormData.name"
+            class="entity-editor-panel__input"
+            type="text"
+            placeholder="标绘名称"
+          />
+        </div>
+
+        <div class="entity-editor-panel__section">
+          <label class="entity-editor-panel__label">类型</label>
+          <input
+            :value="primitiveInfo.type"
+            class="entity-editor-panel__input"
+            type="text"
+            disabled
+          />
+        </div>
+
+        <div class="entity-editor-panel__section">
+          <label class="entity-editor-panel__label">可见性</label>
+          <label class="entity-editor-panel__switch">
+            <input v-model="primitiveFormData.show" type="checkbox" />
+            <span class="slider" />
+          </label>
+        </div>
+
+        <!-- 点属性 -->
+        <template v-if="primitiveInfo.type === 'point'">
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">点大小</label>
+            <input
+              v-model.number="primitivePointProps.pixelSize"
+              class="entity-editor-panel__input"
+              type="number"
+              min="1"
+              max="50"
+            />
+          </div>
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">点颜色</label>
+            <input
+              v-model="primitivePointProps.color"
+              class="entity-editor-panel__input"
+              type="color"
+            />
+          </div>
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">边框颜色</label>
+            <input
+              v-model="primitivePointProps.outlineColor"
+              class="entity-editor-panel__input"
+              type="color"
+            />
+          </div>
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">边框宽度</label>
+            <input
+              v-model.number="primitivePointProps.outlineWidth"
+              class="entity-editor-panel__input"
+              type="number"
+              min="0"
+              max="10"
+            />
+          </div>
+        </template>
+
+        <!-- 折线属性 -->
+        <template v-if="primitiveInfo.type === 'polyline'">
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">线宽</label>
+            <input
+              v-model.number="primitivePolylineProps.width"
+              class="entity-editor-panel__input"
+              type="number"
+              min="1"
+              max="20"
+            />
+          </div>
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">线条颜色</label>
+            <input
+              v-model="primitivePolylineProps.color"
+              class="entity-editor-panel__input"
+              type="color"
+            />
+          </div>
+        </template>
+
+        <!-- 多边形/圆形属性 -->
+        <template v-if="primitiveInfo.type === 'polygon' || primitiveInfo.type === 'circle'">
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">填充颜色</label>
+            <input
+              v-model="primitivePolygonProps.materialColor"
+              class="entity-editor-panel__input"
+              type="color"
+            />
+          </div>
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">填充透明度</label>
+            <input
+              v-model.number="primitivePolygonProps.alpha"
+              class="entity-editor-panel__input"
+              type="number"
+              min="0"
+              max="1"
+              step="0.1"
+            />
+          </div>
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">边框颜色</label>
+            <input
+              v-model="primitivePolygonProps.outlineColor"
+              class="entity-editor-panel__input"
+              type="color"
+            />
+          </div>
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">边框宽度</label>
+            <input
+              v-model.number="primitivePolygonProps.outlineWidth"
+              class="entity-editor-panel__input"
+              type="number"
+              min="0"
+              max="10"
+            />
+          </div>
+        </template>
+
+        <!-- 矩形属性 -->
+        <template v-if="primitiveInfo.type === 'rectangle'">
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">填充颜色</label>
+            <input
+              v-model="primitiveRectangleProps.materialColor"
+              class="entity-editor-panel__input"
+              type="color"
+            />
+          </div>
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">填充透明度</label>
+            <input
+              v-model.number="primitiveRectangleProps.alpha"
+              class="entity-editor-panel__input"
+              type="number"
+              min="0"
+              max="1"
+              step="0.1"
+            />
+          </div>
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">边框颜色</label>
+            <input
+              v-model="primitiveRectangleProps.outlineColor"
+              class="entity-editor-panel__input"
+              type="color"
+            />
+          </div>
+          <div class="entity-editor-panel__section">
+            <label class="entity-editor-panel__label">边框宽度</label>
+            <input
+              v-model.number="primitiveRectangleProps.outlineWidth"
+              class="entity-editor-panel__input"
+              type="number"
+              min="0"
+              max="10"
+            />
+          </div>
+        </template>
+
+        <div class="entity-editor-panel__actions">
+          <button class="entity-editor-panel__button entity-editor-panel__button--save" @click="handleSavePrimitive">
+            保存
+          </button>
+          <button class="entity-editor-panel__button entity-editor-panel__button--delete" @click="handleDeletePrimitive">
+            删除
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Entity 编辑模式 -->
+    <div v-else-if="!props.isPrimitive && entityInfo && entityInfo.entity">
     <div class="entity-editor-panel__header">
       <h3>实体属性</h3>
     </div>
@@ -237,6 +419,13 @@
       </div>
     </div>
     </div>
+    <!-- 错误状态 -->
+    <div v-else class="entity-editor-panel__error">
+      <p>无法加载对象信息</p>
+      <p v-if="props.isPrimitive">Primitive ID: {{ props.primitiveId || '未提供' }}</p>
+      <p v-else>Entity ID: {{ props.entityId || '未提供' }}</p>
+      <p>图层 ID: {{ props.layerId || '未提供' }}</p>
+    </div>
   </div>
 </template>
 
@@ -253,6 +442,10 @@ interface Props {
   entityId?: string;
   layerId?: string | null;
   entityName?: string;
+  // Primitive 相关 props
+  primitiveId?: string;
+  isPrimitive?: boolean;
+  primitiveType?: string;
 }
 
 interface Emits {
@@ -267,8 +460,14 @@ const emit = defineEmits<Emits>();
 const cesiumStore = useCesiumStore();
 const layerStore = useLayerStore();
 
-// 从 viewer 中获取实体的响应式引用
+// 从 viewer 中获取实体或 Primitive 的响应式引用
 const entityInfo = ref<EntityInfo | null>(null);
+const primitiveInfo = ref<{
+  primitive: Cesium.Primitive | Cesium.PointPrimitiveCollection;
+  layerId: string | null;
+  primitiveId: string;
+  type: string;
+} | null>(null);
 
 // 调试：检查 props
 console.log('EntityEditorPanel: defineProps called');
@@ -276,6 +475,54 @@ console.log('EntityEditorPanel: props:', props);
 console.log('EntityEditorPanel: props.entityInfo:', props.entityInfo);
 console.log('EntityEditorPanel: props.entityId:', props.entityId);
 console.log('EntityEditorPanel: props.layerId:', props.layerId);
+
+/**
+ * 通过 Primitive ID 从图层中获取 Primitive
+ */
+const loadPrimitiveById = () => {
+  if (!props.primitiveId) {
+    primitiveInfo.value = null;
+    return;
+  }
+
+  console.log('EntityEditorPanel: Loading primitive by ID:', props.primitiveId);
+  
+  // 从图层中查找 Primitive
+  let primitive: Cesium.Primitive | Cesium.PointPrimitiveCollection | undefined;
+  let foundLayerId: string | null = null;
+  
+  if (props.layerId) {
+    const layer = layerStore.layers[props.layerId];
+    if (layer && layer.primitives[props.primitiveId]) {
+      primitive = layer.primitives[props.primitiveId];
+      foundLayerId = props.layerId;
+    }
+  } else {
+    // 遍历所有图层查找
+    for (const layerId in layerStore.layers) {
+      const layer = layerStore.layers[layerId];
+      if (layer.primitives[props.primitiveId]) {
+        primitive = layer.primitives[props.primitiveId];
+        foundLayerId = layerId;
+        break;
+      }
+    }
+  }
+  
+  if (primitive) {
+    const primitiveType = (primitive as any)._type || props.primitiveType || 'unknown';
+    primitiveInfo.value = {
+      primitive,
+      layerId: foundLayerId,
+      primitiveId: props.primitiveId,
+      type: primitiveType,
+    };
+    console.log('EntityEditorPanel: Primitive loaded successfully:', primitive);
+  } else {
+    console.error('EntityEditorPanel: Primitive not found with ID:', props.primitiveId);
+    primitiveInfo.value = null;
+  }
+};
 
 /**
  * 通过实体 ID 从 viewer 中获取实体
@@ -334,9 +581,15 @@ const loadEntityById = () => {
 
 // 监听 props 变化
 watch(
-  () => [props.entityId, props.entityInfo],
+  () => [props.entityId, props.entityInfo, props.primitiveId, props.isPrimitive],
   () => {
-    loadEntityById();
+    // 明确检查 isPrimitive 标志，如果为 true 且 primitiveId 存在，则加载 Primitive
+    if (props.isPrimitive === true && props.primitiveId) {
+      loadPrimitiveById();
+    } else if (props.isPrimitive !== true && (props.entityId || props.entityInfo)) {
+      // 只有当明确不是 Primitive 时才加载 Entity
+      loadEntityById();
+    }
   },
   { immediate: true }
 );
@@ -345,8 +598,13 @@ watch(
 watch(
   () => cesiumStore.getViewer,
   (viewer) => {
-    if (viewer && (props.entityId || props.entityInfo)) {
-      loadEntityById();
+    if (viewer) {
+      // 明确检查 isPrimitive 标志
+      if (props.isPrimitive === true && props.primitiveId) {
+        loadPrimitiveById();
+      } else if (props.isPrimitive !== true && (props.entityId || props.entityInfo)) {
+        loadEntityById();
+      }
     }
   },
   { immediate: true }
@@ -388,6 +646,38 @@ const ellipseProps = ref({
   materialColor: '#00ff00',
   alpha: 0.5,
   outlineColor: '#00ff00',
+  outlineWidth: 2,
+});
+
+// Primitive 表单数据
+const primitiveFormData = ref({
+  name: '',
+  show: true,
+});
+
+const primitivePointProps = ref({
+  pixelSize: 10,
+  color: '#ffff00',
+  outlineColor: '#000000',
+  outlineWidth: 2,
+});
+
+const primitivePolylineProps = ref({
+  width: 3,
+  color: '#00ffff',
+});
+
+const primitivePolygonProps = ref({
+  materialColor: '#00ffff',
+  alpha: 0.5,
+  outlineColor: '#00ffff',
+  outlineWidth: 2,
+});
+
+const primitiveRectangleProps = ref({
+  materialColor: '#0000ff',
+  alpha: 0.5,
+  outlineColor: '#0000ff',
   outlineWidth: 2,
 });
 
@@ -782,6 +1072,190 @@ const handleSave = () => {
 };
 
 /**
+ * 加载 Primitive 属性到表单
+ */
+const loadPrimitiveProperties = () => {
+  if (!primitiveInfo.value) {
+    return;
+  }
+
+  const primitive = primitiveInfo.value.primitive;
+  const config = (primitive as any)._config || {};
+
+  primitiveFormData.value.name = (primitive as any)._name || '';
+  primitiveFormData.value.show = primitive.show !== false;
+
+  // 加载点属性
+  if (primitiveInfo.value.type === 'point') {
+    if (primitive instanceof Cesium.PointPrimitiveCollection && primitive.length > 0) {
+      // 尝试获取第一个点的属性
+      try {
+        const pointPrimitive = (primitive as any)[0];
+        if (pointPrimitive) {
+          primitivePointProps.value.pixelSize = pointPrimitive.pixelSize || 10;
+          if (pointPrimitive.color) {
+            primitivePointProps.value.color = cesiumToColor(pointPrimitive.color);
+          }
+          if (pointPrimitive.outlineColor) {
+            primitivePointProps.value.outlineColor = cesiumToColor(pointPrimitive.outlineColor);
+          }
+          primitivePointProps.value.outlineWidth = pointPrimitive.outlineWidth || 2;
+        }
+      } catch (e) {
+        // 使用配置中的值
+        if (config.fillColor) {
+          primitivePointProps.value.color = config.fillColor;
+        }
+        if (config.outlineColor) {
+          primitivePointProps.value.outlineColor = config.outlineColor;
+        }
+        primitivePointProps.value.pixelSize = config.lineWidth || 10;
+        primitivePointProps.value.outlineWidth = config.outlineWidth || 2;
+      }
+    }
+  }
+
+  // 加载折线属性
+  if (primitiveInfo.value.type === 'polyline' && primitive instanceof Cesium.Primitive) {
+    const geometryInstance = primitive.geometryInstances;
+    if (geometryInstance instanceof Cesium.GeometryInstance) {
+      const geometry = geometryInstance.geometry;
+      if (geometry instanceof Cesium.PolylineGeometry) {
+        primitivePolylineProps.value.width = (geometry as any).width || 3;
+      }
+    }
+    // 从配置中获取颜色
+    if (config.lineColor) {
+      primitivePolylineProps.value.color = config.lineColor;
+    }
+  }
+
+  // 加载多边形/圆形属性
+  if ((primitiveInfo.value.type === 'polygon' || primitiveInfo.value.type === 'circle') && primitive instanceof Cesium.Primitive) {
+    if (config.fillColor) {
+      primitivePolygonProps.value.materialColor = config.fillColor;
+    }
+    if (config.fillColorAlpha !== undefined) {
+      primitivePolygonProps.value.alpha = config.fillColorAlpha;
+    }
+    if (config.outlineColor) {
+      primitivePolygonProps.value.outlineColor = config.outlineColor;
+    }
+    primitivePolygonProps.value.outlineWidth = config.outlineWidth || 2;
+  }
+
+  // 加载矩形属性
+  if (primitiveInfo.value.type === 'rectangle' && primitive instanceof Cesium.Primitive) {
+    if (config.fillColor) {
+      primitiveRectangleProps.value.materialColor = config.fillColor;
+    }
+    if (config.fillColorAlpha !== undefined) {
+      primitiveRectangleProps.value.alpha = config.fillColorAlpha;
+    }
+    if (config.outlineColor) {
+      primitiveRectangleProps.value.outlineColor = config.outlineColor;
+    }
+    primitiveRectangleProps.value.outlineWidth = config.outlineWidth || 2;
+  }
+};
+
+/**
+ * 保存 Primitive 属性
+ */
+const handleSavePrimitive = () => {
+  if (!primitiveInfo.value) {
+    return;
+  }
+
+  const primitive = primitiveInfo.value.primitive;
+  const viewer = cesiumStore.getViewer;
+  if (!viewer) {
+    return;
+  }
+
+  // 更新名称和可见性
+  (primitive as any)._name = primitiveFormData.value.name;
+  primitive.show = primitiveFormData.value.show;
+
+  // 更新配置
+  const config = (primitive as any)._config || {};
+  
+  // 更新点属性
+  if (primitiveInfo.value.type === 'point' && primitive instanceof Cesium.PointPrimitiveCollection) {
+    if (primitive.length > 0) {
+      try {
+        const pointPrimitive = (primitive as any)[0];
+        if (pointPrimitive) {
+          pointPrimitive.pixelSize = primitivePointProps.value.pixelSize;
+          pointPrimitive.color = colorToCesium(primitivePointProps.value.color);
+          pointPrimitive.outlineColor = colorToCesium(primitivePointProps.value.outlineColor);
+          pointPrimitive.outlineWidth = primitivePointProps.value.outlineWidth;
+        }
+      } catch (e) {
+        console.warn('Failed to update point primitive:', e);
+      }
+    }
+    config.fillColor = primitivePointProps.value.color;
+    config.lineWidth = primitivePointProps.value.pixelSize;
+    config.outlineColor = primitivePointProps.value.outlineColor;
+    config.outlineWidth = primitivePointProps.value.outlineWidth;
+  }
+
+  // 更新折线属性（需要重新创建 Primitive，因为颜色是几何属性）
+  if (primitiveInfo.value.type === 'polyline' && primitive instanceof Cesium.Primitive) {
+    config.lineColor = primitivePolylineProps.value.color;
+    config.lineWidth = primitivePolylineProps.value.width;
+    // 注意：Primitive 的颜色修改比较复杂，这里只更新配置
+    // 实际的颜色修改需要重新创建 Primitive
+  }
+
+  // 更新多边形/圆形属性
+  if ((primitiveInfo.value.type === 'polygon' || primitiveInfo.value.type === 'circle') && primitive instanceof Cesium.Primitive) {
+    config.fillColor = primitivePolygonProps.value.materialColor;
+    config.fillColorAlpha = primitivePolygonProps.value.alpha;
+    config.outlineColor = primitivePolygonProps.value.outlineColor;
+    config.outlineWidth = primitivePolygonProps.value.outlineWidth;
+    // 注意：Primitive 的颜色修改需要重新创建，这里只更新配置
+  }
+
+  // 更新矩形属性
+  if (primitiveInfo.value.type === 'rectangle' && primitive instanceof Cesium.Primitive) {
+    config.fillColor = primitiveRectangleProps.value.materialColor;
+    config.fillColorAlpha = primitiveRectangleProps.value.alpha;
+    config.outlineColor = primitiveRectangleProps.value.outlineColor;
+    config.outlineWidth = primitiveRectangleProps.value.outlineWidth;
+    // 注意：Primitive 的颜色修改需要重新创建，这里只更新配置
+  }
+
+  (primitive as any)._config = config;
+
+  emit('close');
+};
+
+/**
+ * 删除 Primitive
+ */
+const handleDeletePrimitive = () => {
+  if (!primitiveInfo.value) {
+    return;
+  }
+
+  if (confirm('确定要删除这个标绘对象吗？')) {
+    const viewer = cesiumStore.getViewer;
+    if (viewer) {
+      viewer.scene.primitives.remove(primitiveInfo.value.primitive);
+
+      // 从图层中移除
+      if (primitiveInfo.value.layerId) {
+        layerStore.detachPrimitive(primitiveInfo.value.layerId, primitiveInfo.value.primitiveId);
+      }
+    }
+
+    emit('close');
+  }
+};
+
+/**
  * 删除实体
  */
 const handleDelete = () => {
@@ -821,6 +1295,18 @@ watch(
       loadEntityProperties();
     } else {
       console.warn('EntityInfo is invalid:', newValue);
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+// 监听 Primitive 变化，重新加载属性
+watch(
+  () => primitiveInfo.value,
+  (newValue) => {
+    console.log('PrimitiveInfo changed:', newValue);
+    if (newValue) {
+      loadPrimitiveProperties();
     }
   },
   { immediate: true, deep: true }

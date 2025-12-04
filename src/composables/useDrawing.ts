@@ -34,9 +34,12 @@ interface DrawingState {
   activeType: DrawingType;
   isDrawing: boolean;
   handler: Cesium.ScreenSpaceEventHandler | null;
-  activeEntity: Cesium.Entity | null;
+  activePrimitive: Cesium.Primitive | Cesium.PointPrimitive | null;
   positions: Cesium.Cartesian3[];
   startPosition: Cesium.Cartesian3 | null;
+  previewPrimitive: Cesium.Primitive | null;
+  previewRectangle: Cesium.Rectangle | null;
+  previewCircleRadius: number | null;
 }
 
 export function useDrawing() {
@@ -47,9 +50,12 @@ export function useDrawing() {
     activeType: null,
     isDrawing: false,
     handler: null,
-    activeEntity: null,
+    activePrimitive: null,
     positions: [],
     startPosition: null,
+    previewPrimitive: null,
+    previewRectangle: null,
+    previewCircleRadius: null,
   });
 
   const activeType = computed(() => state.value.activeType);
@@ -74,9 +80,16 @@ export function useDrawing() {
       state.value.handler.destroy();
       state.value.handler = null;
     }
-    state.value.activeEntity = null;
+    const viewer = cesiumStore.getViewer;
+    if (viewer && state.value.previewPrimitive) {
+      viewer.scene.primitives.remove(state.value.previewPrimitive);
+      state.value.previewPrimitive = null;
+    }
+    state.value.activePrimitive = null;
     state.value.positions = [];
     state.value.startPosition = null;
+    state.value.previewRectangle = null;
+    state.value.previewCircleRadius = null;
     state.value.isDrawing = false;
   };
 
@@ -89,7 +102,7 @@ export function useDrawing() {
   };
 
   /**
-   * 创建点标绘
+   * 创建点标绘（使用Primitive）
    */
   const drawPoint = (layerId: string, position: Cesium.Cartesian3, config?: EntityConfig) => {
     const viewer = getViewer();
@@ -100,26 +113,35 @@ export function useDrawing() {
     const pointColor = config?.fillColor 
       ? hexToCesiumColor(config.fillColor, config.fillColorAlpha)
       : Cesium.Color.YELLOW;
-    const outlineColor = config?.outlineColor
-      ? hexToCesiumColor(config.outlineColor, config.outlineColorAlpha)
-      : Cesium.Color.BLACK;
 
-    const labelText = config?.showPropertyName && config?.propertyName
-      ? config.propertyName
-      : `(${longitude.toFixed(6)}, ${latitude.toFixed(6)})`;
-
-    return layerStore.createEntityInLayer(layerId, {
-      id: `point-${Date.now()}`,
-      name: config?.propertyName || '标绘点',
+    const pointPrimitiveCollection = new Cesium.PointPrimitiveCollection();
+    const pointPrimitive = pointPrimitiveCollection.add({
       position: position,
-      point: {
-        pixelSize: config?.lineWidth || 10,
-        color: pointColor,
-        outlineColor: outlineColor,
-        outlineWidth: config?.outlineWidth ?? 2,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-      },
-      label: config?.showPropertyName || config?.showLengthInfo ? {
+      pixelSize: config?.lineWidth || 10,
+      color: pointColor,
+      outlineColor: config?.outlineColor
+        ? hexToCesiumColor(config.outlineColor, config.outlineColorAlpha)
+        : Cesium.Color.BLACK,
+      outlineWidth: config?.outlineWidth ?? 2,
+      heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+    });
+
+    // 存储配置和元数据
+    (pointPrimitiveCollection as any)._id = `point-${Date.now()}`;
+    (pointPrimitiveCollection as any)._name = config?.propertyName || '标绘点';
+    (pointPrimitiveCollection as any)._config = config;
+    (pointPrimitiveCollection as any)._type = 'point';
+    (pointPrimitiveCollection as any)._position = position; // 存储位置信息用于高亮
+
+    // 如果需要标签，使用Billboard或Label
+    if (config?.showPropertyName || config?.showLengthInfo) {
+      const labelText = config?.showPropertyName && config?.propertyName
+        ? config.propertyName
+        : `(${longitude.toFixed(6)}, ${latitude.toFixed(6)})`;
+      
+      const labelPrimitive = new Cesium.LabelCollection();
+      labelPrimitive.add({
+        position: position,
         text: labelText,
         font: '12px sans-serif',
         fillColor: Cesium.Color.WHITE,
@@ -128,13 +150,19 @@ export function useDrawing() {
         style: Cesium.LabelStyle.FILL_AND_OUTLINE,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         pixelOffset: new Cesium.Cartesian2(0, -25),
-      } : undefined,
-      _config: config,
-    });
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+      });
+      
+      viewer.scene.primitives.add(labelPrimitive);
+      layerStore.attachPrimitive(layerId, labelPrimitive as any);
+    }
+
+    const primitive = layerStore.createPrimitiveInLayer(layerId, pointPrimitiveCollection as any);
+    return primitive;
   };
 
   /**
-   * 创建折线标绘
+   * 创建折线标绘（使用Primitive）
    */
   const drawPolyline = (layerId: string, positions: Cesium.Cartesian3[], config?: EntityConfig) => {
     if (positions.length < 2) {
@@ -145,22 +173,37 @@ export function useDrawing() {
       ? hexToCesiumColor(config.lineColor, config.lineColorAlpha)
       : Cesium.Color.CYAN;
 
-    const entity = layerStore.createEntityInLayer(layerId, {
-      id: `polyline-${Date.now()}`,
-      name: config?.propertyName || '标绘线',
-      polyline: {
-        positions: positions,
-        width: config?.lineWidth ?? 3,
-        material: lineColor,
-        clampToGround: true,
-      },
-      _config: config,
+    const polylineGeometry = new Cesium.PolylineGeometry({
+      positions: positions,
+      width: config?.lineWidth ?? 3,
+      vertexFormat: Cesium.PolylineColorAppearance.VERTEX_FORMAT,
     });
-    return entity;
+
+    const primitive = new Cesium.Primitive({
+      geometryInstances: new Cesium.GeometryInstance({
+        geometry: polylineGeometry,
+        attributes: {
+          color: Cesium.ColorGeometryInstanceAttribute.fromColor(lineColor),
+        },
+      }),
+      appearance: new Cesium.PolylineColorAppearance({
+        translucent: lineColor.alpha < 1.0,
+      }),
+      asynchronous: false,
+    });
+
+    // 存储配置和元数据
+    (primitive as any)._id = `polyline-${Date.now()}`;
+    (primitive as any)._name = config?.propertyName || '标绘线';
+    (primitive as any)._config = config;
+    (primitive as any)._type = 'polyline';
+    (primitive as any)._positions = positions; // 存储位置信息用于高亮
+
+    return layerStore.createPrimitiveInLayer(layerId, primitive);
   };
 
   /**
-   * 创建多边形标绘
+   * 创建多边形标绘（使用Primitive）
    */
   const drawPolygon = (layerId: string, positions: Cesium.Cartesian3[], config?: EntityConfig) => {
     if (positions.length < 3) {
@@ -174,24 +217,69 @@ export function useDrawing() {
       ? hexToCesiumColor(config.outlineColor, config.outlineColorAlpha)
       : Cesium.Color.CYAN;
 
-    const entity = layerStore.createEntityInLayer(layerId, {
-      id: `polygon-${Date.now()}`,
-      name: config?.propertyName || '标绘面',
-      polygon: {
-        hierarchy: positions,
-        material: fillColor,
-        outline: config?.showBorder ?? config?.outline ?? true,
-        outlineColor: outlineColor,
-        outlineWidth: config?.outlineWidth ?? 2,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-      },
-      _config: config,
+    const polygonGeometry = new Cesium.PolygonGeometry({
+      polygonHierarchy: new Cesium.PolygonHierarchy(positions),
+      height: 0,
+      vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
     });
-    return entity;
+
+    const primitive = new Cesium.Primitive({
+      geometryInstances: new Cesium.GeometryInstance({
+        geometry: polygonGeometry,
+        attributes: {
+          color: Cesium.ColorGeometryInstanceAttribute.fromColor(fillColor),
+        },
+      }),
+      appearance: new Cesium.PerInstanceColorAppearance({
+        translucent: fillColor.alpha < 1.0,
+        closed: true,
+      }),
+      asynchronous: false,
+    });
+
+    // 存储配置和元数据
+    (primitive as any)._id = `polygon-${Date.now()}`;
+    (primitive as any)._name = config?.propertyName || '标绘面';
+    (primitive as any)._config = config;
+    (primitive as any)._type = 'polygon';
+    (primitive as any)._positions = positions; // 存储位置信息用于高亮
+
+    const result = layerStore.createPrimitiveInLayer(layerId, primitive);
+
+    // 如果需要边框，单独创建一个折线Primitive
+    if (config?.showBorder ?? config?.outline ?? true) {
+      const outlinePositions = [...positions, positions[0]]; // 闭合多边形
+      const outlineGeometry = new Cesium.PolylineGeometry({
+        positions: outlinePositions,
+        width: config?.outlineWidth ?? 2,
+        vertexFormat: Cesium.PolylineColorAppearance.VERTEX_FORMAT,
+      });
+
+      const outlinePrimitive = new Cesium.Primitive({
+        geometryInstances: new Cesium.GeometryInstance({
+          geometry: outlineGeometry,
+          attributes: {
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(outlineColor),
+          },
+        }),
+        appearance: new Cesium.PolylineColorAppearance(),
+        asynchronous: false,
+      });
+
+      // 将边框primitive关联到同一个图层
+      (outlinePrimitive as any)._id = `polygon-outline-${Date.now()}`;
+      (outlinePrimitive as any)._parentId = (primitive as any)._id;
+      layerStore.attachPrimitive(layerId, outlinePrimitive);
+      const viewer = getViewer();
+      viewer.scene.primitives.add(outlinePrimitive);
+      outlinePrimitive.show = layerStore.layers[layerId]?.visible ?? true;
+    }
+
+    return result;
   };
 
   /**
-   * 创建矩形标绘
+   * 创建矩形标绘（使用Primitive）
    */
   const drawRectangle = (layerId: string, rectangle: Cesium.Rectangle, config?: EntityConfig) => {
     const fillColor = config?.fillColor
@@ -201,24 +289,95 @@ export function useDrawing() {
       ? hexToCesiumColor(config.outlineColor, config.outlineColorAlpha)
       : Cesium.Color.BLUE;
 
-    const entity = layerStore.createEntityInLayer(layerId, {
-      id: `rectangle-${Date.now()}`,
-      name: config?.propertyName || '标绘矩形',
-      rectangle: {
-        coordinates: rectangle,
-        material: fillColor,
-        outline: config?.showBorder ?? config?.outline ?? true,
-        outlineColor: outlineColor,
-        outlineWidth: config?.outlineWidth ?? 2,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-      },
-      _config: config,
+    const rectangleGeometry = new Cesium.RectangleGeometry({
+      rectangle: rectangle,
+      height: 0,
+      vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
     });
-    return entity;
+
+    const primitive = new Cesium.Primitive({
+      geometryInstances: new Cesium.GeometryInstance({
+        geometry: rectangleGeometry,
+        attributes: {
+          color: Cesium.ColorGeometryInstanceAttribute.fromColor(fillColor),
+        },
+      }),
+      appearance: new Cesium.PerInstanceColorAppearance({
+        translucent: fillColor.alpha < 1.0,
+        closed: true,
+      }),
+      asynchronous: false,
+    });
+
+    // 存储配置和元数据
+    (primitive as any)._id = `rectangle-${Date.now()}`;
+    (primitive as any)._name = config?.propertyName || '标绘矩形';
+    (primitive as any)._config = config;
+    (primitive as any)._type = 'rectangle';
+    (primitive as any)._rectangle = rectangle; // 存储矩形信息用于高亮
+
+    const result = layerStore.createPrimitiveInLayer(layerId, primitive);
+
+    // 如果需要边框，单独创建一个折线Primitive
+    if (config?.showBorder ?? config?.outline ?? true) {
+      const southwest = Cesium.Cartesian3.fromRadians(
+        rectangle.west,
+        rectangle.south,
+        0
+      );
+      const southeast = Cesium.Cartesian3.fromRadians(
+        rectangle.east,
+        rectangle.south,
+        0
+      );
+      const northeast = Cesium.Cartesian3.fromRadians(
+        rectangle.east,
+        rectangle.north,
+        0
+      );
+      const northwest = Cesium.Cartesian3.fromRadians(
+        rectangle.west,
+        rectangle.north,
+        0
+      );
+      const outlinePositions = [
+        southwest,
+        southeast,
+        northeast,
+        northwest,
+        southwest, // 闭合
+      ];
+      const outlineGeometry = new Cesium.PolylineGeometry({
+        positions: outlinePositions,
+        width: config?.outlineWidth ?? 2,
+        vertexFormat: Cesium.PolylineColorAppearance.VERTEX_FORMAT,
+      });
+
+      const outlinePrimitive = new Cesium.Primitive({
+        geometryInstances: new Cesium.GeometryInstance({
+          geometry: outlineGeometry,
+          attributes: {
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(outlineColor),
+          },
+        }),
+        appearance: new Cesium.PolylineColorAppearance(),
+        asynchronous: false,
+      });
+
+      // 将边框primitive关联到同一个图层
+      (outlinePrimitive as any)._id = `rectangle-outline-${Date.now()}`;
+      (outlinePrimitive as any)._parentId = (primitive as any)._id;
+      layerStore.attachPrimitive(layerId, outlinePrimitive);
+      const viewer = getViewer();
+      viewer.scene.primitives.add(outlinePrimitive);
+      outlinePrimitive.show = layerStore.layers[layerId]?.visible ?? true;
+    }
+
+    return result;
   };
 
   /**
-   * 创建圆形标绘
+   * 创建圆形标绘（使用Primitive）
    */
   const drawCircle = (layerId: string, center: Cesium.Cartesian3, radius: number, config?: EntityConfig) => {
     const fillColor = config?.fillColor
@@ -228,21 +387,107 @@ export function useDrawing() {
       ? hexToCesiumColor(config.outlineColor, config.outlineColorAlpha)
       : Cesium.Color.GREEN;
 
-    return layerStore.createEntityInLayer(layerId, {
-      id: `circle-${Date.now()}`,
-      name: config?.propertyName || '标绘圆',
-      position: center,
-      ellipse: {
-        semiMajorAxis: radius,
-        semiMinorAxis: radius,
-        material: fillColor,
-        outline: config?.showBorder ?? config?.outline ?? true,
-        outlineColor: outlineColor,
-        outlineWidth: config?.outlineWidth ?? 2,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-      },
-      _config: config,
+    // 计算圆形上的点，使用PolygonGeometry来绘制圆形
+    const cartographic = Cesium.Cartographic.fromCartesian(center);
+    const positions: Cesium.Cartesian3[] = [];
+    const numPoints = 64;
+    
+    // 计算圆形轮廓点 - 使用简化的方法
+    // 计算单位圆上的点，然后根据半径和中心点进行变换
+    const normal = Cesium.Ellipsoid.WGS84.geodeticSurfaceNormal(center, new Cesium.Cartesian3());
+    const east = Cesium.Cartesian3.cross(
+      Cesium.Cartesian3.UNIT_Z,
+      normal,
+      new Cesium.Cartesian3()
+    );
+    Cesium.Cartesian3.normalize(east, east);
+    const north = Cesium.Cartesian3.cross(normal, east, new Cesium.Cartesian3());
+    Cesium.Cartesian3.normalize(north, north);
+    
+    for (let i = 0; i < numPoints; i++) {
+      const angle = (i / numPoints) * Cesium.Math.TWO_PI;
+      const cosAngle = Math.cos(angle);
+      const sinAngle = Math.sin(angle);
+      
+      // 在切平面上计算点
+      const point = new Cesium.Cartesian3();
+      Cesium.Cartesian3.multiplyByScalar(east, radius * cosAngle, point);
+      const northComponent = new Cesium.Cartesian3();
+      Cesium.Cartesian3.multiplyByScalar(north, radius * sinAngle, northComponent);
+      Cesium.Cartesian3.add(point, northComponent, point);
+      Cesium.Cartesian3.add(center, point, point);
+      
+      // 将点投影到椭球面上
+      const cartographicPoint = Cesium.Cartographic.fromCartesian(point);
+      positions.push(Cesium.Cartesian3.fromRadians(
+        cartographicPoint.longitude,
+        cartographicPoint.latitude,
+        cartographic.height
+      ));
+    }
+
+    const polygonGeometry = new Cesium.PolygonGeometry({
+      polygonHierarchy: new Cesium.PolygonHierarchy(positions),
+      height: 0,
+      vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
     });
+
+    const primitive = new Cesium.Primitive({
+      geometryInstances: new Cesium.GeometryInstance({
+        geometry: polygonGeometry,
+        attributes: {
+          color: Cesium.ColorGeometryInstanceAttribute.fromColor(fillColor),
+        },
+      }),
+      appearance: new Cesium.PerInstanceColorAppearance({
+        translucent: fillColor.alpha < 1.0,
+        closed: true,
+      }),
+      asynchronous: false,
+    });
+
+    // 存储配置和元数据
+    (primitive as any)._id = `circle-${Date.now()}`;
+    (primitive as any)._name = config?.propertyName || '标绘圆';
+    (primitive as any)._config = config;
+    (primitive as any)._type = 'circle';
+    (primitive as any)._center = center; // 存储中心点用于高亮
+    (primitive as any)._radius = radius; // 存储半径用于高亮
+    (primitive as any)._positions = positions; // 存储位置信息用于高亮
+
+    const result = layerStore.createPrimitiveInLayer(layerId, primitive);
+
+    // 如果需要边框，单独创建一个折线Primitive（圆形轮廓）
+    if (config?.showBorder ?? config?.outline ?? true) {
+      const outlinePositions = [...positions, positions[0]]; // 闭合圆形
+
+      const outlineGeometry = new Cesium.PolylineGeometry({
+        positions: outlinePositions,
+        width: config?.outlineWidth ?? 2,
+        vertexFormat: Cesium.PolylineColorAppearance.VERTEX_FORMAT,
+      });
+
+      const outlinePrimitive = new Cesium.Primitive({
+        geometryInstances: new Cesium.GeometryInstance({
+          geometry: outlineGeometry,
+          attributes: {
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(outlineColor),
+          },
+        }),
+        appearance: new Cesium.PolylineColorAppearance(),
+        asynchronous: false,
+      });
+
+      // 将边框primitive关联到同一个图层
+      (outlinePrimitive as any)._id = `circle-outline-${Date.now()}`;
+      (outlinePrimitive as any)._parentId = (primitive as any)._id;
+      layerStore.attachPrimitive(layerId, outlinePrimitive);
+      const viewer = getViewer();
+      viewer.scene.primitives.add(outlinePrimitive);
+      outlinePrimitive.show = layerStore.layers[layerId]?.visible ?? true;
+    }
+
+    return result;
   };
 
   /**
@@ -297,9 +542,9 @@ export function useDrawing() {
     // 右键结束
     handler.setInputAction(() => {
       if (state.value.positions.length >= 2) {
-        if (state.value.activeEntity) {
-          viewer.entities.remove(state.value.activeEntity);
-          state.value.activeEntity = null;
+        if (state.value.previewPrimitive) {
+          viewer.scene.primitives.remove(state.value.previewPrimitive);
+          state.value.previewPrimitive = null;
         }
         drawPolyline(layerId, state.value.positions, (state.value as any).config);
       }
@@ -308,14 +553,15 @@ export function useDrawing() {
   };
 
   /**
-   * 更新折线预览
+   * 更新折线预览（使用Primitive）
    */
   const updatePolylinePreview = (
     viewer: Cesium.Viewer,
     currentPosition?: Cesium.Cartesian2
   ) => {
-    if (state.value.activeEntity) {
-      viewer.entities.remove(state.value.activeEntity);
+    if (state.value.previewPrimitive) {
+      viewer.scene.primitives.remove(state.value.previewPrimitive);
+      state.value.previewPrimitive = null;
     }
 
     const positions = [...state.value.positions];
@@ -330,15 +576,25 @@ export function useDrawing() {
     }
 
     if (positions.length >= 2) {
-      state.value.activeEntity = viewer.entities.add({
-        polyline: {
-          positions: positions,
-          width: 4,
-          material: Cesium.Color.YELLOW,
-          clampToGround: true,
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, Number.MAX_VALUE),
-        },
+      const polylineGeometry = new Cesium.PolylineGeometry({
+        positions: positions,
+        width: 4,
+        vertexFormat: Cesium.PolylineColorAppearance.VERTEX_FORMAT,
       });
+
+      const primitive = new Cesium.Primitive({
+        geometryInstances: new Cesium.GeometryInstance({
+          geometry: polylineGeometry,
+          attributes: {
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.YELLOW),
+          },
+        }),
+        appearance: new Cesium.PolylineColorAppearance(),
+        asynchronous: false,
+      });
+
+      viewer.scene.primitives.add(primitive);
+      state.value.previewPrimitive = primitive;
     }
   };
 
@@ -374,9 +630,9 @@ export function useDrawing() {
     // 右键结束
     handler.setInputAction(() => {
       if (state.value.positions.length >= 3) {
-        if (state.value.activeEntity) {
-          viewer.entities.remove(state.value.activeEntity);
-          state.value.activeEntity = null;
+        if (state.value.previewPrimitive) {
+          viewer.scene.primitives.remove(state.value.previewPrimitive);
+          state.value.previewPrimitive = null;
         }
         drawPolygon(layerId, state.value.positions, (state.value as any).config);
       }
@@ -385,14 +641,15 @@ export function useDrawing() {
   };
 
   /**
-   * 更新多边形预览
+   * 更新多边形预览（使用Primitive）
    */
   const updatePolygonPreview = (
     viewer: Cesium.Viewer,
     currentPosition?: Cesium.Cartesian2
   ) => {
-    if (state.value.activeEntity) {
-      viewer.entities.remove(state.value.activeEntity);
+    if (state.value.previewPrimitive) {
+      viewer.scene.primitives.remove(state.value.previewPrimitive);
+      state.value.previewPrimitive = null;
     }
 
     const positions = [...state.value.positions];
@@ -407,25 +664,49 @@ export function useDrawing() {
     }
 
     if (positions.length >= 3) {
-      state.value.activeEntity = viewer.entities.add({
-        polygon: {
-          hierarchy: [...positions, positions[0]],
-          material: Cesium.Color.YELLOW.withAlpha(0.6),
-          outline: true,
-          outlineColor: Cesium.Color.YELLOW,
-          outlineWidth: 3,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-        },
+      const closedPositions = [...positions, positions[0]];
+      const polygonGeometry = new Cesium.PolygonGeometry({
+        polygonHierarchy: new Cesium.PolygonHierarchy(closedPositions),
+        height: 0,
+        vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
       });
+
+      const primitive = new Cesium.Primitive({
+        geometryInstances: new Cesium.GeometryInstance({
+          geometry: polygonGeometry,
+          attributes: {
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.YELLOW.withAlpha(0.6)),
+          },
+        }),
+        appearance: new Cesium.PerInstanceColorAppearance({
+          translucent: true,
+          closed: true,
+        }),
+        asynchronous: false,
+      });
+
+      viewer.scene.primitives.add(primitive);
+      state.value.previewPrimitive = primitive;
     } else if (positions.length >= 2) {
-      state.value.activeEntity = viewer.entities.add({
-        polyline: {
-          positions: positions,
-          width: 3,
-          material: Cesium.Color.YELLOW,
-          clampToGround: true,
-        },
+      const polylineGeometry = new Cesium.PolylineGeometry({
+        positions: positions,
+        width: 3,
+        vertexFormat: Cesium.PolylineColorAppearance.VERTEX_FORMAT,
       });
+
+      const primitive = new Cesium.Primitive({
+        geometryInstances: new Cesium.GeometryInstance({
+          geometry: polylineGeometry,
+          attributes: {
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.YELLOW),
+          },
+        }),
+        appearance: new Cesium.PolylineColorAppearance(),
+        asynchronous: false,
+      });
+
+      viewer.scene.primitives.add(primitive);
+      state.value.previewPrimitive = primitive;
     }
   };
 
@@ -484,38 +765,79 @@ export function useDrawing() {
           );
 
           const rectangle = Cesium.Rectangle.fromDegrees(west, south, east, north);
+          state.value.previewRectangle = rectangle;
 
           // 更新临时矩形
-          if (state.value.activeEntity) {
-            viewer.entities.remove(state.value.activeEntity);
+          if (state.value.previewPrimitive) {
+            viewer.scene.primitives.remove(state.value.previewPrimitive);
+            state.value.previewPrimitive = null;
           }
 
-          state.value.activeEntity = viewer.entities.add({
-            rectangle: {
-              coordinates: rectangle,
-              material: Cesium.Color.YELLOW.withAlpha(0.6),
-              outline: true,
-              outlineColor: Cesium.Color.YELLOW,
-              outlineWidth: 3,
-              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            },
+          const rectangleGeometry = new Cesium.RectangleGeometry({
+            rectangle: rectangle,
+            height: 0,
+            vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
           });
+
+          const southwest = Cesium.Cartesian3.fromRadians(
+            rectangle.west,
+            rectangle.south,
+            0
+          );
+          const southeast = Cesium.Cartesian3.fromRadians(
+            rectangle.east,
+            rectangle.south,
+            0
+          );
+          const northeast = Cesium.Cartesian3.fromRadians(
+            rectangle.east,
+            rectangle.north,
+            0
+          );
+          const northwest = Cesium.Cartesian3.fromRadians(
+            rectangle.west,
+            rectangle.north,
+            0
+          );
+          const outlinePositions = [
+            southwest,
+            southeast,
+            northeast,
+            northwest,
+            southwest,
+          ];
+          const outlineGeometry = new Cesium.PolylineGeometry({
+            positions: outlinePositions,
+            width: 3,
+            vertexFormat: Cesium.PolylineColorAppearance.VERTEX_FORMAT,
+          });
+
+          const primitive = new Cesium.Primitive({
+            geometryInstances: new Cesium.GeometryInstance({
+              geometry: rectangleGeometry,
+              attributes: {
+                color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.YELLOW.withAlpha(0.6)),
+              },
+            }),
+            appearance: new Cesium.PerInstanceColorAppearance({
+              translucent: true,
+              closed: true,
+            }),
+            asynchronous: false,
+          });
+
+          viewer.scene.primitives.add(primitive);
+          state.value.previewPrimitive = primitive;
         }
       }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
     // 右键结束
     handler.setInputAction(() => {
-      if (state.value.startPosition && state.value.activeEntity) {
-        const rectangle = (state.value.activeEntity.rectangle?.coordinates?.getValue(
-          viewer.clock.currentTime
-        ) as Cesium.Rectangle) || null;
-
-        if (rectangle) {
-          viewer.entities.remove(state.value.activeEntity);
-          state.value.activeEntity = null;
-          drawRectangle(layerId, rectangle, (state.value as any).config);
-        }
+      if (state.value.startPosition && state.value.previewRectangle) {
+        viewer.scene.primitives.remove(state.value.previewPrimitive!);
+        state.value.previewPrimitive = null;
+        drawRectangle(layerId, state.value.previewRectangle, (state.value as any).config);
       }
       stopDrawing();
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
@@ -553,40 +875,87 @@ export function useDrawing() {
         if (cartesian) {
           // 计算半径
           const radius = Cesium.Cartesian3.distance(state.value.startPosition, cartesian);
+          state.value.previewCircleRadius = radius;
 
           // 更新临时圆
-          if (state.value.activeEntity) {
-            viewer.entities.remove(state.value.activeEntity);
+          if (state.value.previewPrimitive) {
+            viewer.scene.primitives.remove(state.value.previewPrimitive);
+            state.value.previewPrimitive = null;
           }
 
-          state.value.activeEntity = viewer.entities.add({
-            position: state.value.startPosition,
-            ellipse: {
-              semiMajorAxis: radius,
-              semiMinorAxis: radius,
-              material: Cesium.Color.GREEN.withAlpha(0.5),
-              outline: true,
-              outlineColor: Cesium.Color.GREEN,
-              outlineWidth: 2,
-              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            },
+          // 计算圆形预览点
+          const cartographic = Cesium.Cartographic.fromCartesian(state.value.startPosition);
+          const positions: Cesium.Cartesian3[] = [];
+          const numPoints = 64;
+          
+          // 计算圆形轮廓点 - 使用简化的方法
+          const normal = Cesium.Ellipsoid.WGS84.geodeticSurfaceNormal(
+            state.value.startPosition,
+            new Cesium.Cartesian3()
+          );
+          const east = Cesium.Cartesian3.cross(
+            Cesium.Cartesian3.UNIT_Z,
+            normal,
+            new Cesium.Cartesian3()
+          );
+          Cesium.Cartesian3.normalize(east, east);
+          const north = Cesium.Cartesian3.cross(normal, east, new Cesium.Cartesian3());
+          Cesium.Cartesian3.normalize(north, north);
+          
+          for (let i = 0; i < numPoints; i++) {
+            const angle = (i / numPoints) * Cesium.Math.TWO_PI;
+            const cosAngle = Math.cos(angle);
+            const sinAngle = Math.sin(angle);
+            
+            // 在切平面上计算点
+            const point = new Cesium.Cartesian3();
+            Cesium.Cartesian3.multiplyByScalar(east, radius * cosAngle, point);
+            const northComponent = new Cesium.Cartesian3();
+            Cesium.Cartesian3.multiplyByScalar(north, radius * sinAngle, northComponent);
+            Cesium.Cartesian3.add(point, northComponent, point);
+            Cesium.Cartesian3.add(state.value.startPosition, point, point);
+            
+            // 将点投影到椭球面上
+            const cartographicPoint = Cesium.Cartographic.fromCartesian(point);
+            positions.push(Cesium.Cartesian3.fromRadians(
+              cartographicPoint.longitude,
+              cartographicPoint.latitude,
+              cartographic.height
+            ));
+          }
+
+          const polygonGeometry = new Cesium.PolygonGeometry({
+            polygonHierarchy: new Cesium.PolygonHierarchy(positions),
+            height: 0,
+            vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
           });
+
+          const primitive = new Cesium.Primitive({
+            geometryInstances: new Cesium.GeometryInstance({
+              geometry: polygonGeometry,
+              attributes: {
+                color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.GREEN.withAlpha(0.5)),
+              },
+            }),
+            appearance: new Cesium.PerInstanceColorAppearance({
+              translucent: true,
+              closed: true,
+            }),
+            asynchronous: false,
+          });
+
+          viewer.scene.primitives.add(primitive);
+          state.value.previewPrimitive = primitive;
         }
       }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
     // 右键结束
     handler.setInputAction(() => {
-      if (state.value.startPosition && state.value.activeEntity) {
-        const ellipse = state.value.activeEntity.ellipse;
-        if (ellipse) {
-          const center = state.value.startPosition;
-          const radius = ellipse.semiMajorAxis?.getValue(viewer.clock.currentTime) || 0;
-
-          viewer.entities.remove(state.value.activeEntity);
-          state.value.activeEntity = null;
-          drawCircle(layerId, center, radius, (state.value as any).config);
-        }
+      if (state.value.startPosition && state.value.previewCircleRadius !== null) {
+        viewer.scene.primitives.remove(state.value.previewPrimitive!);
+        state.value.previewPrimitive = null;
+        drawCircle(layerId, state.value.startPosition, state.value.previewCircleRadius, (state.value as any).config);
       }
       stopDrawing();
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);

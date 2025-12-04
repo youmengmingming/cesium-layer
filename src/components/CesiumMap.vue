@@ -67,6 +67,7 @@ const {
   initEntitySelection,
   deselectEntity,
   selectEntity,
+  selectPrimitive,
 } = useEntitySelection();
 
 const { openWidget, closeWidget } = useWidgetManager();
@@ -139,7 +140,29 @@ const bootViewer = async () => {
     
     doubleClickHandler = (event: any) => {
       console.log('Double click event received:', event);
-      if (event.detail?.entity) {
+      console.log('Event type:', event.type);
+      console.log('Event detail:', event.detail);
+      
+      if (event.type === 'primitive-double-click' && event.detail?.primitive) {
+        const primitive = event.detail.primitive;
+        console.log('Double clicked primitive:', primitive);
+        
+        // 确保 Primitive 已被选择
+        selectPrimitive(primitive);
+        
+        // 等待 selectedEntity 更新，确保 primitive 信息已设置
+        setTimeout(() => {
+          console.log('Selected primitive:', selectedEntity.value);
+          // 确保使用最新的 primitive 对象
+          const currentPrimitive = selectedEntity.value?.primitive || primitive;
+          if (currentPrimitive) {
+            openEntityEditor({ primitive: currentPrimitive });
+          } else {
+            console.warn('Primitive not found in selectedEntity, using original primitive');
+            openEntityEditor({ primitive });
+          }
+        }, 50);
+      } else if (event.type === 'entity-double-click' && event.detail?.entity) {
         const entity = event.detail.entity;
         console.log('Double clicked entity:', entity);
         
@@ -152,10 +175,11 @@ const bootViewer = async () => {
           openEntityEditor({ entity });
         }, 100);
       } else {
-        console.warn('Double click event missing entity:', event);
+        console.warn('Double click event missing entity or primitive:', event);
       }
     };
     canvas.addEventListener('entity-double-click', doubleClickHandler);
+    canvas.addEventListener('primitive-double-click', doubleClickHandler);
   }
 };
 
@@ -190,8 +214,75 @@ const openEntityEditor = (eventDetail: any) => {
     closeWidget(editorWindowId.value);
   }
   
-  // 获取实体信息
+  // 获取实体或 Primitive 信息
   const entity = eventDetail?.entity;
+  const primitive = eventDetail?.primitive;
+  
+  // 处理 Primitive
+  if (primitive) {
+    const primitiveId = (primitive as any)._id || `primitive-${Date.now()}`;
+    const primitiveName = (primitive as any)._name || '标绘对象';
+    const primitiveType = (primitive as any)._type || 'unknown';
+    
+    // 尝试从 selectedEntity 获取图层信息
+    let layerId: string | null = null;
+    const currentSelected = selectedEntity.value;
+    
+    if (currentSelected && currentSelected.primitive === primitive) {
+      layerId = currentSelected.layerId;
+    } else {
+      // 尝试查找 Primitive 所属的图层（通过对象引用比较，更可靠）
+      const layerStore = useLayerStore();
+      for (const lid in layerStore.layers) {
+        const layer = layerStore.layers[lid];
+        // 遍历所有 primitives，通过对象引用比较
+        for (const pid in layer.primitives) {
+          if (layer.primitives[pid] === primitive) {
+            layerId = lid;
+            break;
+          }
+        }
+        if (layerId) break;
+      }
+    }
+    
+    console.log('Opening editor for primitive:', primitive);
+    console.log('Primitive ID:', primitiveId);
+    console.log('Primitive type:', primitiveType);
+    console.log('Layer ID:', layerId);
+    
+    // 打开新的编辑器窗口
+    const widgetId = openWidget({
+      component: EntityEditorPanel,
+      title: `标绘属性编辑器 - ${primitiveName}`,
+      props: {
+        primitiveId: primitiveId,
+        layerId: layerId,
+        entityName: primitiveName,
+        isPrimitive: true,
+        primitiveType: primitiveType,
+      },
+      events: {
+        close: () => {
+          editorWindowId.value = null;
+          deselectEntity();
+        },
+        delete: () => {
+          editorWindowId.value = null;
+          deselectEntity();
+        },
+      },
+      width: 450,
+      height: 700,
+      x: (window.innerWidth - 450) / 2,
+      y: 100,
+    });
+    
+    editorWindowId.value = widgetId;
+    return;
+  }
+  
+  // 处理 Entity（原有逻辑）
   if (!entity) {
     console.warn('openEntityEditor: entity is missing', eventDetail);
     return;

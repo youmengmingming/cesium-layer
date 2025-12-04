@@ -4,9 +4,12 @@ import { useCesiumStore } from '../stores/cesium';
 import { useLayerStore } from '../stores/layers';
 
 export interface EntityInfo {
-  entity: Cesium.Entity;
+  entity?: Cesium.Entity;
+  primitive?: Cesium.Primitive | Cesium.PointPrimitiveCollection;
   layerId: string | null;
   entityId: string;
+  primitiveId?: string;
+  isPrimitive?: boolean;
 }
 
 export function useEntitySelection() {
@@ -15,6 +18,7 @@ export function useEntitySelection() {
 
   const selectedEntity = ref<EntityInfo | null>(null);
   const highlightedEntity = ref<Cesium.Entity | null>(null);
+  const highlightedPrimitive = ref<Cesium.Primitive | Cesium.PointPrimitiveCollection | null>(null);
   const highlightOutline: Cesium.Entity[] = [];
 
   const isEntitySelected = computed(() => selectedEntity.value !== null);
@@ -46,6 +50,24 @@ export function useEntitySelection() {
   };
 
   /**
+   * 查找 Primitive 所属的图层
+   */
+  const findPrimitiveLayer = (primitive: Cesium.Primitive | Cesium.PointPrimitiveCollection): { layerId: string; primitiveId: string } | null => {
+    const primitiveId = (primitive as any)._id;
+    if (!primitiveId) {
+      return null;
+    }
+    
+    for (const layerId in layerStore.layers) {
+      const layer = layerStore.layers[layerId];
+      if (layer.primitives[primitiveId] === primitive) {
+        return { layerId, primitiveId };
+      }
+    }
+    return null;
+  };
+
+  /**
    * 清除高亮
    */
   const clearHighlight = () => {
@@ -55,6 +77,109 @@ export function useEntitySelection() {
     });
     highlightOutline.length = 0;
     highlightedEntity.value = null;
+    highlightedPrimitive.value = null;
+  };
+
+  /**
+   * 高亮 Primitive
+   */
+  const highlightPrimitive = (primitive: Cesium.Primitive | Cesium.PointPrimitiveCollection) => {
+    const viewer = getViewer();
+    
+    // 清除之前的高亮
+    clearHighlight();
+    
+    if (!primitive) {
+      return;
+    }
+    
+    highlightedPrimitive.value = primitive;
+    
+    // 获取 Primitive 的类型和位置信息
+    const primitiveType = (primitive as any)._type;
+    const config = (primitive as any)._config;
+    
+    // 根据 Primitive 类型创建高亮轮廓
+    if (primitiveType === 'point') {
+      // 点：从存储的位置信息中获取
+      const storedPosition = (primitive as any)._position;
+      if (storedPosition) {
+        const outline = viewer.entities.add({
+          position: storedPosition,
+          point: {
+            pixelSize: 20,
+            color: Cesium.Color.TRANSPARENT,
+            outlineColor: Cesium.Color.YELLOW,
+            outlineWidth: 3,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          },
+        });
+        highlightOutline.push(outline);
+      }
+    } else if (primitiveType === 'polyline' && primitive instanceof Cesium.Primitive) {
+      // 折线：从存储的位置信息中获取
+      const storedPositions = (primitive as any)._positions;
+      if (storedPositions && storedPositions.length > 0) {
+        const outline = viewer.entities.add({
+          polyline: {
+            positions: storedPositions,
+            width: 6,
+            material: Cesium.Color.YELLOW.withAlpha(0.8),
+            clampToGround: true,
+          },
+        });
+        highlightOutline.push(outline);
+      }
+    } else if (primitiveType === 'polygon' && primitive instanceof Cesium.Primitive) {
+      // 多边形：从存储的位置信息中获取
+      const storedPositions = (primitive as any)._positions;
+      if (storedPositions && storedPositions.length > 0) {
+        const closedPositions = [...storedPositions, storedPositions[0]]; // 闭合
+        const outline = viewer.entities.add({
+          polyline: {
+            positions: closedPositions,
+            width: 4,
+            material: Cesium.Color.YELLOW,
+            clampToGround: true,
+          },
+        });
+        highlightOutline.push(outline);
+      }
+    } else if (primitiveType === 'circle' && primitive instanceof Cesium.Primitive) {
+      // 圆形：从存储的位置信息中获取
+      const storedPositions = (primitive as any)._positions;
+      if (storedPositions && storedPositions.length > 0) {
+        const closedPositions = [...storedPositions, storedPositions[0]]; // 闭合
+        const outline = viewer.entities.add({
+          polyline: {
+            positions: closedPositions,
+            width: 4,
+            material: Cesium.Color.YELLOW,
+            clampToGround: true,
+          },
+        });
+        highlightOutline.push(outline);
+      }
+    } else if (primitiveType === 'rectangle' && primitive instanceof Cesium.Primitive) {
+      // 矩形：从存储的矩形信息中获取
+      const storedRectangle = (primitive as any)._rectangle;
+      if (storedRectangle) {
+        const southwest = Cesium.Cartesian3.fromRadians(storedRectangle.west, storedRectangle.south, 0);
+        const southeast = Cesium.Cartesian3.fromRadians(storedRectangle.east, storedRectangle.south, 0);
+        const northeast = Cesium.Cartesian3.fromRadians(storedRectangle.east, storedRectangle.north, 0);
+        const northwest = Cesium.Cartesian3.fromRadians(storedRectangle.west, storedRectangle.north, 0);
+        const positions = [southwest, southeast, northeast, northwest, southwest];
+        const outline = viewer.entities.add({
+          polyline: {
+            positions: positions,
+            width: 4,
+            material: Cesium.Color.YELLOW,
+            clampToGround: true,
+          },
+        });
+        highlightOutline.push(outline);
+      }
+    }
   };
 
   /**
@@ -198,6 +323,40 @@ export function useEntitySelection() {
   };
 
   /**
+   * 选择 Primitive
+   */
+  const selectPrimitive = (primitive: Cesium.Primitive | Cesium.PointPrimitiveCollection | null) => {
+    if (primitive) {
+      const layerInfo = findPrimitiveLayer(primitive);
+      const primitiveId = (primitive as any)._id || '';
+      
+      if (layerInfo) {
+        selectedEntity.value = {
+          primitive,
+          layerId: layerInfo.layerId,
+          entityId: primitiveId,
+          primitiveId: primitiveId,
+          isPrimitive: true,
+        };
+        highlightPrimitive(primitive);
+      } else {
+        // Primitive 不在任何图层中，但仍然可以选择
+        selectedEntity.value = {
+          primitive,
+          layerId: null,
+          entityId: primitiveId,
+          primitiveId: primitiveId,
+          isPrimitive: true,
+        };
+        highlightPrimitive(primitive);
+      }
+    } else {
+      selectedEntity.value = null;
+      clearHighlight();
+    }
+  };
+
+  /**
    * 选择实体
    */
   const selectEntity = (entity: Cesium.Entity | null) => {
@@ -208,6 +367,7 @@ export function useEntitySelection() {
           entity,
           layerId: layerInfo.layerId,
           entityId: layerInfo.entityId,
+          isPrimitive: false,
         };
         highlightEntity(entity);
       } else {
@@ -216,6 +376,7 @@ export function useEntitySelection() {
           entity,
           layerId: null,
           entityId: entity.id || '',
+          isPrimitive: false,
         };
         highlightEntity(entity);
       }
@@ -258,8 +419,9 @@ export function useEntitySelection() {
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
     handler.setInputAction((click: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
-      // 使用多种方式尝试拾取实体
+      // 使用多种方式尝试拾取对象
       let pickedObject: any = undefined;
+      let pickedPrimitive: Cesium.Primitive | Cesium.PointPrimitiveCollection | null = null;
       
       try {
         pickedObject = viewer.scene.pick(click.position);
@@ -267,16 +429,107 @@ export function useEntitySelection() {
         console.warn('Scene pick failed:', e);
       }
       
-      // 如果直接拾取失败，尝试使用 drillPick（可以拾取被遮挡的实体）
-      if (!pickedObject || !(pickedObject.id instanceof Cesium.Entity)) {
+      // 检查是否拾取到 Primitive
+      if (pickedObject && pickedObject.primitive) {
+        let primitive = pickedObject.primitive;
+        
+        // 如果拾取到的是边框 primitive（有 _parentId），需要找到对应的主 primitive
+        if ((primitive as any)._parentId && (primitive as any)._parentId) {
+          const parentId = (primitive as any)._parentId;
+          // 遍历场景中的所有 primitives 查找主 primitive
+          const primitives = viewer.scene.primitives;
+          for (let i = 0; i < primitives.length; i++) {
+            const p = primitives.get(i);
+            if ((p as any)._id === parentId && (p as any)._type) {
+              primitive = p;
+              break;
+            }
+          }
+        }
+        
+        // 检查是否是我们的标绘 Primitive（有 _id 和 _type 属性）
+        // 对于 PointPrimitiveCollection，需要检查集合本身
+        if ((primitive as any)._id && (primitive as any)._type && !(primitive as any)._parentId) {
+          pickedPrimitive = primitive;
+        }
+        // 如果拾取到的是 PointPrimitive，需要找到它所属的 PointPrimitiveCollection
+        else if (primitive instanceof Cesium.PointPrimitive) {
+          // 遍历场景中的所有 primitives 查找包含此点的 PointPrimitiveCollection
+          const primitives = viewer.scene.primitives;
+          for (let i = 0; i < primitives.length; i++) {
+            const p = primitives.get(i);
+            if (p instanceof Cesium.PointPrimitiveCollection && (p as any)._id && (p as any)._type) {
+              // 检查这个集合是否包含被拾取的点
+              for (let j = 0; j < p.length; j++) {
+                const point = p.get(j);
+                if (point === primitive) {
+                  pickedPrimitive = p;
+                  break;
+                }
+              }
+              if (pickedPrimitive) break;
+            }
+          }
+        }
+      }
+      
+      // 如果直接拾取失败，尝试使用 drillPick（可以拾取被遮挡的对象）
+      if (!pickedObject || (!(pickedObject.id instanceof Cesium.Entity) && !pickedPrimitive)) {
         try {
           const objects = viewer.scene.drillPick(click.position);
           if (objects && objects.length > 0) {
-            // 找到第一个 Entity
+            // 优先查找 Primitive
             for (const obj of objects) {
-              if (obj && obj.id instanceof Cesium.Entity) {
-                pickedObject = obj;
-                break;
+              if (obj && obj.primitive) {
+                let primitive = obj.primitive;
+                
+                // 如果拾取到的是边框 primitive（有 _parentId），需要找到对应的主 primitive
+                if ((primitive as any)._parentId) {
+                  const parentId = (primitive as any)._parentId;
+                  const primitives = viewer.scene.primitives;
+                  for (let i = 0; i < primitives.length; i++) {
+                    const p = primitives.get(i);
+                    if ((p as any)._id === parentId && (p as any)._type) {
+                      primitive = p;
+                      break;
+                    }
+                  }
+                }
+                
+                // 检查是否是我们的标绘 Primitive
+                if ((primitive as any)._id && (primitive as any)._type && !(primitive as any)._parentId) {
+                  pickedPrimitive = primitive;
+                  pickedObject = obj;
+                  break;
+                }
+                // 如果拾取到的是 PointPrimitive，需要找到它所属的 PointPrimitiveCollection
+                else if (primitive instanceof Cesium.PointPrimitive) {
+                  const primitives = viewer.scene.primitives;
+                  for (let i = 0; i < primitives.length; i++) {
+                    const p = primitives.get(i);
+                    if (p instanceof Cesium.PointPrimitiveCollection && (p as any)._id && (p as any)._type) {
+                      for (let j = 0; j < p.length; j++) {
+                        const point = p.get(j);
+                        if (point === primitive) {
+                          pickedPrimitive = p;
+                          pickedObject = obj;
+                          break;
+                        }
+                      }
+                      if (pickedPrimitive) break;
+                    }
+                  }
+                  if (pickedPrimitive) break;
+                }
+              }
+            }
+            // 如果没有找到 Primitive，查找 Entity
+            if (!pickedPrimitive) {
+              for (const obj of objects) {
+                if (obj && obj.id instanceof Cesium.Entity) {
+                  pickedObject = obj;
+                  break;
+                }
               }
             }
           }
@@ -285,7 +538,44 @@ export function useEntitySelection() {
         }
       }
 
-      if (Cesium.defined(pickedObject) && pickedObject.id instanceof Cesium.Entity) {
+      // 处理 Primitive 选择
+      if (pickedPrimitive) {
+        const currentTime = Date.now();
+        const timeSinceLastClick = currentTime - lastClickTime;
+        const lastPickedPrimitive = lastClickEntity as any as Cesium.Primitive | Cesium.PointPrimitiveCollection | null;
+
+        // 检测双击（增加时间窗口到 500ms，减少单击延迟到 150ms）
+        if (
+          pickedPrimitive === lastPickedPrimitive &&
+          timeSinceLastClick < 500 &&
+          clickTimeout !== null
+        ) {
+          // 双击事件
+          clearTimeout(clickTimeout);
+          clickTimeout = null;
+          lastClickTime = 0;
+          lastClickEntity = null;
+
+          // 触发双击事件
+          selectPrimitive(pickedPrimitive);
+          // 触发自定义双击事件
+          viewer.cesiumWidget.canvas.dispatchEvent(
+            new CustomEvent('primitive-double-click', { detail: { primitive: pickedPrimitive } })
+          );
+        } else {
+          // 单击事件
+          lastClickEntity = pickedPrimitive as any;
+          lastClickTime = currentTime;
+
+          clickTimeout = window.setTimeout(() => {
+            // 单击：选择并高亮 Primitive
+            selectPrimitive(pickedPrimitive);
+            clickTimeout = null;
+          }, 150);
+        }
+      }
+      // 处理 Entity 选择
+      else if (Cesium.defined(pickedObject) && pickedObject.id instanceof Cesium.Entity) {
         const entity = pickedObject.id;
 
         const currentTime = Date.now();
@@ -353,7 +643,9 @@ export function useEntitySelection() {
     selectedEntity,
     isEntitySelected,
     highlightEntity,
+    highlightPrimitive,
     selectEntity,
+    selectPrimitive,
     deselectEntity,
     clearHighlight,
     initEntitySelection,
