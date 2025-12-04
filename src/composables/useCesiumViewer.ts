@@ -171,6 +171,28 @@ export function useCesiumViewer() {
 
     if (imageryProvider && instance.imageryLayers.length > 0) {
       const baseLayer = instance.imageryLayers.get(0);
+      
+      // 调整影像图层的颜色参数，使地图更鲜艳
+      const layerSettings = config.imageryProvider?.layerSettings;
+      if (baseLayer && layerSettings) {
+        // 应用配置的亮度值（如果未配置则使用默认值 1.0）
+        if (layerSettings.brightness !== undefined) {
+          baseLayer.brightness = layerSettings.brightness;
+        }
+        // 应用配置的对比度值
+        if (layerSettings.contrast !== undefined) {
+          baseLayer.contrast = layerSettings.contrast;
+        }
+        // 应用配置的饱和度值（这是使颜色更鲜艳的关键参数）
+        if (layerSettings.saturation !== undefined) {
+          baseLayer.saturation = layerSettings.saturation;
+        }
+        // 应用配置的 gamma 值
+        if (layerSettings.gamma !== undefined) {
+          baseLayer.gamma = layerSettings.gamma;
+        }
+      }
+      
       baseLayer?.imageryProvider?.errorEvent.addEventListener((error: any) => {
         console.warn('Imagery provider failed, fallback to OSM:', error);
         try {
@@ -180,7 +202,23 @@ export function useCesiumViewer() {
           if (baseLayer) {
             instance.imageryLayers.remove(baseLayer);
           }
-          instance.imageryLayers.addImageryProvider(osmProvider);
+          const fallbackLayer = instance.imageryLayers.addImageryProvider(osmProvider);
+          // 对新添加的图层也应用相同的颜色调整
+          const layerSettings = config.imageryProvider?.layerSettings;
+          if (fallbackLayer && layerSettings) {
+            if (layerSettings.brightness !== undefined) {
+              fallbackLayer.brightness = layerSettings.brightness;
+            }
+            if (layerSettings.contrast !== undefined) {
+              fallbackLayer.contrast = layerSettings.contrast;
+            }
+            if (layerSettings.saturation !== undefined) {
+              fallbackLayer.saturation = layerSettings.saturation;
+            }
+            if (layerSettings.gamma !== undefined) {
+              fallbackLayer.gamma = layerSettings.gamma;
+            }
+          }
         } catch (fallbackError) {
           console.error('Fallback to OSM failed:', fallbackError);
         }

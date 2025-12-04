@@ -20,6 +20,18 @@ export interface CesiumConfig {
     
     // 其他配置参数
     options?: Record<string, any>;
+    
+    // 影像图层颜色调整参数（使地图更鲜艳）
+    layerSettings?: {
+      // 亮度 (默认 1.0，推荐范围 0.8-1.5)
+      brightness?: number;
+      // 对比度 (默认 1.0，推荐范围 0.8-2.0)
+      contrast?: number;
+      // 饱和度 (默认 1.0，推荐范围 0.0-3.0，值越大颜色越鲜艳)
+      saturation?: number;
+      // Gamma 值 (默认 1.0，推荐范围 0.5-2.0，降低可增加亮度和对比度)
+      gamma?: number;
+    };
   };
   
   // Terrain 地形配置
@@ -41,6 +53,13 @@ export const defaultConfig: CesiumConfig = {
   imageryProvider: {
     useIonImagery: false, // 使用 Cesium Ion 默认影像（assetId 2 可能使用 Bing Maps，在某些地区可能访问失败）
     type: 'osm', // 默认使用 OSM，更可靠
+    // 影像图层颜色调整参数，使地图更鲜艳
+    layerSettings: {
+      brightness: 1.15,   // 增加亮度
+      contrast: 1.2,      // 增加对比度
+      saturation: 1.8,    // 增加饱和度，使颜色更鲜艳
+      gamma: 0.85,        // 降低 gamma，增加整体亮度和对比度
+    },
   },
   
   terrainProvider: {
