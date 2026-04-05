@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import * as Cesium from 'cesium';
 import { useCesiumStore } from './cesium';
+import { mapProvider } from '../map-engine/MapProvider';
 import {
   exportLayers,
   exportSingleLayer,
@@ -174,7 +175,11 @@ export const useLayerStore = defineStore('layer-store', {
      */
     createEntityInLayer(layerId: string, entityOptions: Cesium.Entity.ConstructorOptions & { _config?: any }) {
       const cesiumStore = useCesiumStore();
-      const viewer = cesiumStore.getViewer;
+      let viewer = cesiumStore.getViewer;
+
+      if (!viewer) {
+        viewer = mapProvider.engine?.getOriginalViewer();
+      }
 
       if (!viewer) {
         throw new Error('Cesium Viewer 尚未初始化');
@@ -203,7 +208,11 @@ export const useLayerStore = defineStore('layer-store', {
      */
     createPrimitiveInLayer(layerId: string, primitive: Cesium.Primitive) {
       const cesiumStore = useCesiumStore();
-      const viewer = cesiumStore.getViewer;
+      let viewer = cesiumStore.getViewer;
+
+      if (!viewer) {
+        viewer = mapProvider.engine?.getOriginalViewer();
+      }
 
       if (!viewer) {
         throw new Error('Cesium Viewer 尚未初始化');

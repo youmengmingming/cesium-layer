@@ -36,6 +36,7 @@ import { useEntitySelection } from '../composables/useEntitySelection';
 import { useWidgetManager } from '../composables/useWidgetManager';
 import { useWidgetStore } from '../stores/widgets';
 import { useLayerStore } from '../stores/layers';
+import type { MapEngineType } from '../map-engine/core/types';
 import EntityEditorPanel from './EntityEditorPanel.vue';
 
 interface Props {
@@ -57,10 +58,12 @@ const {
 
 const {
   containerRef: mapContainerRef,
-  viewer,
+  engine,
   initViewer,
   destroyViewer,
 } = useCesiumViewer();
+
+const viewer = computed(() => engine.value?.getOriginalViewer() as Cesium.Viewer | null);
 
 const {
   selectedEntity,
@@ -87,8 +90,13 @@ const connectionLabel = computed(() => {
   return '单窗口模式';
 });
 
-const bootViewer = async () => {
-  await initViewer(configRef.value || {});
+const bootViewer = async (type: MapEngineType = 'cesium') => {
+  await initViewer(type, configRef.value || {});
+  
+  if (type !== 'cesium') {
+    // 如果是非 Cesium 引擎，目前跳过 Cesium 特有的初始化逻辑
+    return;
+  }
   
   // 等待 viewer 完全初始化后再设置实体选择
   // 增加重试机制，确保 viewer 已初始化
@@ -196,6 +204,11 @@ const handleResize = () => {
   }
 };
 
+const handleMapSwitch = async (event: any) => {
+  const type = event.detail as MapEngineType;
+  await bootViewer(type);
+};
+
 onMounted(async () => {
   initWindowBridge();
   await bootViewer();
@@ -206,6 +219,7 @@ onMounted(async () => {
   document.addEventListener('mozfullscreenchange', handleResize);
   document.addEventListener('MSFullscreenChange', handleResize);
   window.addEventListener('resize', handleResize);
+  window.addEventListener('map-engine-switch', handleMapSwitch);
 });
 
 const openEntityEditor = (eventDetail: any) => {
@@ -386,6 +400,7 @@ onUnmounted(() => {
   document.removeEventListener('mozfullscreenchange', handleResize);
   document.removeEventListener('MSFullscreenChange', handleResize);
   window.removeEventListener('resize', handleResize);
+  window.removeEventListener('map-engine-switch', handleMapSwitch);
   
   destroyViewer();
 });

@@ -1,72 +1,37 @@
-# Cesium 地图项目
+# 多引擎地图框架项目
 
-这是一个基于 Vue 3 + TypeScript + Vite + Cesium 的地图应用项目。
+这是一个基于 Vue 3 + TypeScript + Vite 构建的高可扩展地图应用框架。本项目核心特点是实现了一层**地图引擎中间层**，使得业务逻辑（如标绘、测量、图层管理）与底层 GIS 框架（Cesium, OpenLayers 等）解耦。
 
-## 功能特性
+## 🌟 核心特性
 
-- ✅ 完整的地图显示功能
-- ✅ 可配置 Cesium Ion Token
-- ✅ 支持多种地图数据源（Cesium Ion、OSM、Bing Maps、ArcGIS、Mapbox、自定义 URL）
-- ✅ 可配置地形数据源
-- ✅ 响应式设计，全屏地图显示
+- **🚀 多引擎无缝切换**: 支持在 **Cesium (3D)** 和 **OpenLayers (2D)** 之间实时切换，业务状态自动同步。
+- **抽象层设计**: 通过统一的接口定义（Drawing, Measurement, LayerManager），极大降低了更换或新增地图引擎的成本。
+- **标绘工具**: 支持点、线、面、矩形、圆的统一标绘操作。
+- **测量工具**: 提供坐标、距离、面积的跨引擎测量功能。
+- **图层管理**: 统一的图层生命周期管理，支持跨引擎的图层显隐控制、删除及导入导出。
+- **窗口联动**: 支持主副窗口视角实时同步（基于 BroadcastChannel）。
 
-## 快速开始
+## 🏗️ 架构设计
+
+项目采用适配器模式设计地图引擎层，目录结构如下：
+
+```
+src/map-engine/
+├── core/               # 核心抽象接口与类型定义
+│   ├── interfaces.ts   # IMapEngine, IDrawing, IMeasurement 等接口
+│   └── types.ts        # 统一的坐标、配置、结果类型
+├── cesium/             # Cesium 引擎具体实现
+├── ol/                 # OpenLayers 引擎具体实现
+├── MapProvider.ts      # 全局地图引擎单例管理器
+└── factory.ts          # 引擎工厂，负责创建不同类型的适配器
+```
+
+## 🛠️ 快速开始
 
 ### 安装依赖
 
 ```bash
 npm install
-```
-
-### 配置 Cesium Token
-
-有两种方式配置 Cesium Ion Token：
-
-#### 方式一：修改配置文件（推荐）
-
-编辑 `src/config/cesium.config.ts` 文件，将 `token` 设置为您的 Cesium Ion Token：
-
-```typescript
-export const cesiumConfig: CesiumConfig = {
-  token: 'YOUR_CESIUM_ION_TOKEN_HERE', // 替换为您的 Token
-  // ...
-};
-```
-
-#### 方式二：使用环境变量
-
-创建 `.env` 文件：
-
-```env
-VITE_CESIUM_TOKEN=YOUR_CESIUM_ION_TOKEN_HERE
-```
-
-获取 Cesium Ion Token: https://cesium.com/ion/tokens
-
-### 配置地图数据源
-
-在 `src/config/cesium.config.ts` 中可以配置地图数据源：
-
-```typescript
-export const cesiumConfig: CesiumConfig = {
-  token: 'YOUR_TOKEN',
-  imageryProvider: {
-    // 使用 Cesium Ion 默认影像
-    useIonImagery: true,
-    
-    // 或者使用其他数据源
-    // type: 'osm', // OpenStreetMap
-    // type: 'arcgis', // ArcGIS
-    // type: 'bing', // Bing Maps (需要 key)
-    // type: 'mapbox', // Mapbox (需要 accessToken)
-    // type: 'custom', // 自定义 URL
-    // customImageryUrl: 'YOUR_IMAGERY_URL',
-  },
-  terrainProvider: {
-    useIonTerrain: true, // 使用 Cesium Ion 默认地形
-    // customTerrainUrl: 'YOUR_TERRAIN_URL',
-  },
-};
 ```
 
 ### 运行项目
@@ -75,76 +40,49 @@ export const cesiumConfig: CesiumConfig = {
 npm run dev
 ```
 
-### 构建项目
+### 切换地图引擎
 
-```bash
-npm run build
+在页面顶部的导航栏右侧，可以通过下拉框在 `Cesium (3D)` 和 `OpenLayers (2D)` 之间进行切换。
+
+## 📖 开发者指南
+
+### 如何添加新地图引擎（以 Leaflet 为例）
+
+1. **创建适配器目录**: `src/map-engine/leaflet/`
+2. **实现接口**:
+   - 实现 `LeafletEngine` 类（继承 `IMapEngine`）
+   - 实现 `LeafletDrawing` 类（继承 `IDrawing`）
+   - 实现 `LeafletMeasurement` 类（继承 `IMeasurement`）
+   - 实现 `LeafletLayerManager` 类（继承 `ILayerManager`）
+3. **注册引擎**: 在 `src/map-engine/factory.ts` 的 `MapEngineFactory` 中添加 `leaflet` 类型分支。
+4. **UI 集成**: 在 `AppHeader.vue` 的切换器中添加 `Leaflet` 选项。
+
+### 在业务组件中使用
+
+通过 `useDrawing`, `useMeasurement`, `useLayerManager` 等 Composable 函数调用地图功能，无需关心当前底层是哪个地图引擎。
+
+```typescript
+import { useDrawing } from '../composables/useDrawing';
+
+const { startDrawing, stopDrawing } = useDrawing();
+
+// 开始绘制多边形，无论当前是 Cesium 还是 OpenLayers，调用方式完全一致
+startDrawing('polygon', 'layer-id');
 ```
 
-## 项目结构
+## ⚙️ 配置说明
 
-```
-src/
-├── config/
-│   └── cesium.config.ts    # Cesium 配置文件（Token 和数据源配置）
-├── components/
-│   └── CesiumMap.vue       # 地图组件
-├── App.vue                 # 主应用组件
-└── main.ts                 # 入口文件
-```
+### Cesium 配置
+编辑 `src/config/cesium.config.ts` 配置 Token 和默认数据源。
 
-## 使用说明
+### OpenLayers 配置
+目前使用默认的 OSM 数据源，可在 `src/map-engine/ol/OLEngine.ts` 中修改初始化配置。
 
-### 在代码中动态配置地图
+## 🔗 相关技术栈
 
-在 `src/App.vue` 中可以动态传入配置：
-
-```vue
-<template>
-  <CesiumMap :config="mapConfig" />
-</template>
-
-<script setup lang="ts">
-import { ref } from 'vue';
-import CesiumMap from './components/CesiumMap.vue';
-import type { CesiumConfig } from './config/cesium.config';
-
-const mapConfig = ref<Partial<CesiumConfig>>({
-  token: 'YOUR_TOKEN',
-  imageryProvider: {
-    type: 'osm',
-    useIonImagery: false,
-  },
-});
-</script>
-```
-
-### 主/副窗口联动与通信
-
-- 运行开发或生产构建后，在主窗口左上角可以看到“打开副窗口”按钮。
-- 点击后会弹出一个新的浏览器窗口（副窗口），自动与主窗口建立 `BroadcastChannel` 通道。
-- 主窗口的视角（镜头位置、航向/俯仰/横滚）会被节流同步到副窗口，适合做一主多从的演示或观测面板。
-- 如果需要重新创建副窗口（例如关闭后），在主窗口再次点击“重新打开副窗口”即可。
-- 也可以手动在 URL 上追加 `?role=secondary&channelId=<ID>` 来让任意窗口加入既有通道，实现更多自定义玩法。
-
-## 支持的数据源类型
-
-- **Cesium Ion** (默认): 使用 Cesium Ion 的默认影像和地形
-- **OpenStreetMap (OSM)**: 免费的开源地图
-- **Bing Maps**: 需要 API Key
-- **ArcGIS**: 支持 ArcGIS MapServer
-- **Mapbox**: 需要 Access Token
-- **自定义 URL**: 支持自定义影像服务 URL
-
-## 注意事项
-
-1. 使用 Cesium Ion 服务需要有效的 Token
-2. 某些数据源（如 Bing Maps、Mapbox）需要额外的 API Key 或 Access Token
-3. 如果未配置 Token，地图可能无法正常显示某些图层
-
-## 相关链接
-
-- [Cesium 官方文档](https://cesium.com/docs/cesiumjs-ref-doc/)
-- [获取 Cesium Ion Token](https://cesium.com/ion/tokens)
-- [Vue 3 文档](https://v3.vuejs.org/)
-- [Vite 文档](https://vitejs.dev/)
+- [Vue 3](https://v3.vuejs.org/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Pinia](https://pinia.vuejs.org/)
+- [Cesium](https://cesium.com/)
+- [OpenLayers](https://openlayers.org/)
+- [Vite](https://vitejs.dev/)

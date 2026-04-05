@@ -2,6 +2,7 @@ import { ref, computed, onUnmounted } from 'vue';
 import * as Cesium from 'cesium';
 import { useCesiumStore } from '../stores/cesium';
 import { useLayerStore } from '../stores/layers';
+import { mapProvider } from '../map-engine/MapProvider';
 
 export interface EntityInfo {
   entity?: Cesium.Entity;
@@ -27,11 +28,19 @@ export function useEntitySelection() {
    * 获取当前 viewer
    */
   const getViewer = (): Cesium.Viewer => {
-    const viewer = cesiumStore.getViewer;
-    if (!viewer) {
+    // 优先尝试从 mapProvider 获取，它是中间层的核心
+    const engine = mapProvider.engine;
+    if (engine) {
+      const viewer = engine.getOriginalViewer();
+      if (viewer) return viewer;
+    }
+
+    // 回退到 store
+    const viewerFromStore = cesiumStore.getViewer;
+    if (!viewerFromStore) {
       throw new Error('Cesium Viewer 尚未初始化');
     }
-    return viewer;
+    return viewerFromStore;
   };
 
   /**

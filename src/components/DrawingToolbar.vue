@@ -130,7 +130,9 @@ watch(
 // 如果没有图层，创建一个默认图层
 if (layers.value.length === 0) {
   const defaultLayer = createLayer('标绘图层');
-  selectedLayerId.value = defaultLayer.id;
+  if (defaultLayer) {
+    selectedLayerId.value = defaultLayer.id;
+  }
 }
 
 const handleStartDrawing = (type: DrawingType) => {

@@ -47,6 +47,11 @@
 
     <div class="app-header__right">
       <div class="app-header__actions">
+        <!-- 地图切换 -->
+        <select class="map-engine-select" v-model="currentMapType" @change="handleMapTypeChange">
+          <option value="cesium">Cesium (3D)</option>
+          <option value="openlayers">OpenLayers (2D)</option>
+        </select>
         <ThemeSwitcher />
         <button class="action-btn" @click="handleFullscreen" title="全屏">
           <span>⛶</span>
@@ -57,8 +62,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useWidgetManager } from '../composables/useWidgetManager';
+import { mapProvider } from '../map-engine/MapProvider';
+import type { MapEngineType } from '../map-engine/core/types';
 import DrawingToolbar from './DrawingToolbar.vue';
 import LayerManager from './LayerManager.vue';
 import MeasurementToolbar from './MeasurementToolbar.vue';
@@ -69,6 +76,12 @@ import ThemeSwitcher from './ThemeSwitcher.vue';
 
 const { openWidget, closeAllWidgets } = useWidgetManager();
 const showMoreMenu = ref(false);
+const currentMapType = ref<MapEngineType>(mapProvider.type || 'cesium');
+
+const handleMapTypeChange = async () => {
+  // 由于地图初始化需要容器，这里发送一个事件或通过全局 store 通知地图组件切换
+  window.dispatchEvent(new CustomEvent('map-engine-switch', { detail: currentMapType.value }));
+};
 
 // 打开标绘工具窗口
 const openDrawingToolbar = () => {
@@ -362,7 +375,30 @@ onUnmounted(() => {
 
 .app-header__actions {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
+}
+
+.map-engine-select {
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.map-engine-select:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.map-engine-select option {
+  background: var(--color-background-secondary);
+  color: var(--color-text);
 }
 
 .action-btn {

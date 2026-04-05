@@ -7,8 +7,10 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "@types/ol": "^6.5.3",
     "cesium": "^1.85.0",
     "echarts": "^5.6.0",
+    "ol": "^10.8.0",
     "pinia": "^2.3.1",
     "vue": "^3.2.6"
   },
