@@ -7,13 +7,6 @@ import { useLayerStore } from '../stores/layers';
 type ImageryProviderFactory = (config: CesiumConfig) => Promise<Cesium.ImageryProvider | undefined>;
 type TerrainProviderFactory = (config: CesiumConfig) => Promise<Cesium.TerrainProvider>;
 
-const isCustomToken = (token?: string) => {
-  if (!token) {
-    return false;
-  }
-  return token !== cesiumConfig.token;
-};
-
 const createImageryProvider: ImageryProviderFactory = async (config) => {
   const imageryConfig = config.imageryProvider;
 
@@ -134,8 +127,8 @@ export function useCesiumViewer() {
 
     const config = mergeConfig(overrides);
 
-    if (isCustomToken(config.token)) {
-      Cesium.Ion.defaultAccessToken = config.token as string;
+    if (config.token) {
+      Cesium.Ion.defaultAccessToken = config.token;
     }
 
     disposeViewer();
