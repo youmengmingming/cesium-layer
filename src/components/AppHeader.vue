@@ -230,8 +230,6 @@ const handleFullscreen = () => {
   }
 };
 
-import { onMounted, onUnmounted } from 'vue';
-
 // 监听点击外部事件
 onMounted(() => {
   if (typeof window !== 'undefined') {

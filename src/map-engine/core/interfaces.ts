@@ -45,6 +45,8 @@ export interface ILayer {
   name: string;
   visible: boolean;
   type: string;
+  entityCount?: number;
+  primitiveCount?: number;
 }
 
 export interface ILayerManager {

@@ -89,6 +89,8 @@ export class OLLayerManager implements ILayerManager {
       name: layer.name,
       visible: layer.visible,
       type: 'ol-layer',
+      entityCount: Object.keys(layer.entities).length,
+      primitiveCount: Object.keys(layer.primitives).length,
     }));
   }
 

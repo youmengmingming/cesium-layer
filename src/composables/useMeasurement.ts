@@ -3,6 +3,8 @@ import { mapProvider } from '../map-engine/MapProvider';
 import type { MeasurementType, MeasurementResult } from '../map-engine/core/types';
 import { type LengthUnit, type AreaUnit, type ElevationUnit } from '../utils/unitConverter';
 
+export type { MeasurementType, MeasurementResult };
+
 export function useMeasurement() {
   const currentMeasurement = ref<MeasurementResult>({});
   const isMeasuring = computed(() => mapProvider.measurement?.isActive() ?? false);

@@ -219,8 +219,15 @@ function serializeEntity(entity: Cesium.Entity): SerializedEntity {
   };
 
   if (entity.name) serialized.name = entity.name;
-  if (entity.description) serialized.description = entity.description;
-  if (entity.show !== undefined) serialized.show = entity.show;
+  if (entity.description) {
+    const description = entity.description.getValue(Cesium.JulianDate.now());
+    if (description) {
+      serialized.description = typeof description === 'string' ? description : String(description);
+    }
+  }
+  if (entity.show !== undefined) {
+    serialized.show = !!entity.show;
+  }
 
   // 序列化配置（从实体的自定义属性中获取）
   if ((entity as any)._config) {
@@ -272,41 +279,42 @@ function serializeEntity(entity: Cesium.Entity): SerializedEntity {
   // 序列化polyline
   if (entity.polyline) {
     const polyline = entity.polyline;
-    serialized.polyline = {};
+    const serializedPolyline: any = {};
     if (polyline.positions) {
       const positions = polyline.positions.getValue(Cesium.JulianDate.now());
       if (Array.isArray(positions)) {
-        serialized.polyline.positions = positions.map((pos) =>
+        serializedPolyline.positions = positions.map((pos) =>
           cartesian3ToLonLat(pos)
         );
       }
     }
     if (polyline.width) {
       const width = polyline.width.getValue(Cesium.JulianDate.now());
-      if (typeof width === 'number') serialized.polyline.width = width;
+      if (typeof width === 'number') serializedPolyline.width = width;
     }
     if (polyline.material) {
       const material = polyline.material.getValue(Cesium.JulianDate.now());
       if (material instanceof Cesium.Color) {
-        serialized.polyline.color = colorToHexRGB(material);
-        serialized.polyline.colorAlpha = material.alpha;
+        serializedPolyline.color = colorToHexRGB(material);
+        serializedPolyline.colorAlpha = material.alpha;
       }
     }
     if (polyline.clampToGround !== undefined) {
-      serialized.polyline.clampToGround = polyline.clampToGround.getValue(
+      serializedPolyline.clampToGround = polyline.clampToGround.getValue(
         Cesium.JulianDate.now()
       ) as boolean;
     }
+    serialized.polyline = serializedPolyline;
   }
 
   // 序列化polygon
   if (entity.polygon) {
     const polygon = entity.polygon;
-    serialized.polygon = {};
+    const serializedPolygon: any = {};
     if (polygon.hierarchy) {
       const hierarchy = polygon.hierarchy.getValue(Cesium.JulianDate.now());
       if (hierarchy && hierarchy.positions) {
-        serialized.polygon.hierarchy = hierarchy.positions.map((pos: Cesium.Cartesian3) =>
+        serializedPolygon.hierarchy = hierarchy.positions.map((pos: Cesium.Cartesian3) =>
           cartesian3ToLonLat(pos)
         );
       }
@@ -314,132 +322,135 @@ function serializeEntity(entity: Cesium.Entity): SerializedEntity {
     if (polygon.material) {
       const material = polygon.material.getValue(Cesium.JulianDate.now());
       if (material instanceof Cesium.Color) {
-        serialized.polygon.materialColor = colorToHexRGB(material);
-        serialized.polygon.alpha = material.alpha;
+        serializedPolygon.materialColor = colorToHexRGB(material);
+        serializedPolygon.alpha = material.alpha;
       }
     }
     if (polygon.outline !== undefined) {
-      serialized.polygon.outline = polygon.outline.getValue(
+      serializedPolygon.outline = polygon.outline.getValue(
         Cesium.JulianDate.now()
       ) as boolean;
     }
     if (polygon.outlineColor) {
       const outlineColor = polygon.outlineColor.getValue(Cesium.JulianDate.now());
       if (outlineColor) {
-        serialized.polygon.outlineColor = colorToHexRGB(outlineColor);
-        serialized.polygon.outlineColorAlpha = outlineColor.alpha;
+        serializedPolygon.outlineColor = colorToHexRGB(outlineColor);
+        serializedPolygon.outlineColorAlpha = outlineColor.alpha;
       }
     }
     if (polygon.outlineWidth) {
       const outlineWidth = polygon.outlineWidth.getValue(Cesium.JulianDate.now());
       if (typeof outlineWidth === 'number') {
-        serialized.polygon.outlineWidth = outlineWidth;
+        serializedPolygon.outlineWidth = outlineWidth;
       }
     }
     if (polygon.heightReference) {
-      serialized.polygon.heightReference = polygon.heightReference.getValue(
+      serializedPolygon.heightReference = polygon.heightReference.getValue(
         Cesium.JulianDate.now()
       ) as string;
     }
+    serialized.polygon = serializedPolygon;
   }
 
   // 序列化rectangle
   if (entity.rectangle) {
     const rectangle = entity.rectangle;
-    serialized.rectangle = {};
+    const serializedRectangle: any = {};
     if (rectangle.coordinates) {
       const coords = rectangle.coordinates.getValue(Cesium.JulianDate.now());
       if (coords) {
-        serialized.rectangle.west = Cesium.Math.toDegrees(coords.west);
-        serialized.rectangle.south = Cesium.Math.toDegrees(coords.south);
-        serialized.rectangle.east = Cesium.Math.toDegrees(coords.east);
-        serialized.rectangle.north = Cesium.Math.toDegrees(coords.north);
+        serializedRectangle.west = Cesium.Math.toDegrees(coords.west);
+        serializedRectangle.south = Cesium.Math.toDegrees(coords.south);
+        serializedRectangle.east = Cesium.Math.toDegrees(coords.east);
+        serializedRectangle.north = Cesium.Math.toDegrees(coords.north);
       }
     }
     if (rectangle.material) {
       const material = rectangle.material.getValue(Cesium.JulianDate.now());
       if (material instanceof Cesium.Color) {
-        serialized.rectangle.materialColor = colorToHexRGB(material);
-        serialized.rectangle.alpha = material.alpha;
+        serializedRectangle.materialColor = colorToHexRGB(material);
+        serializedRectangle.alpha = material.alpha;
       }
     }
     if (rectangle.outline !== undefined) {
-      serialized.rectangle.outline = rectangle.outline.getValue(
+      serializedRectangle.outline = rectangle.outline.getValue(
         Cesium.JulianDate.now()
       ) as boolean;
     }
     if (rectangle.outlineColor) {
       const outlineColor = rectangle.outlineColor.getValue(Cesium.JulianDate.now());
       if (outlineColor) {
-        serialized.rectangle.outlineColor = colorToHexRGB(outlineColor);
-        serialized.rectangle.outlineColorAlpha = outlineColor.alpha;
+        serializedRectangle.outlineColor = colorToHexRGB(outlineColor);
+        serializedRectangle.outlineColorAlpha = outlineColor.alpha;
       }
     }
     if (rectangle.outlineWidth) {
       const outlineWidth = rectangle.outlineWidth.getValue(Cesium.JulianDate.now());
       if (typeof outlineWidth === 'number') {
-        serialized.rectangle.outlineWidth = outlineWidth;
+        serializedRectangle.outlineWidth = outlineWidth;
       }
     }
     if (rectangle.heightReference) {
-      serialized.rectangle.heightReference = rectangle.heightReference.getValue(
+      serializedRectangle.heightReference = rectangle.heightReference.getValue(
         Cesium.JulianDate.now()
       ) as string;
     }
+    serialized.rectangle = serializedRectangle;
   }
 
   // 序列化ellipse
   if (entity.ellipse) {
     const ellipse = entity.ellipse;
-    serialized.ellipse = {};
+    const serializedEllipse: any = {};
     if (ellipse.semiMajorAxis) {
       const semiMajorAxis = ellipse.semiMajorAxis.getValue(Cesium.JulianDate.now());
       if (typeof semiMajorAxis === 'number') {
-        serialized.ellipse.semiMajorAxis = semiMajorAxis;
+        serializedEllipse.semiMajorAxis = semiMajorAxis;
       }
     }
     if (ellipse.semiMinorAxis) {
       const semiMinorAxis = ellipse.semiMinorAxis.getValue(Cesium.JulianDate.now());
       if (typeof semiMinorAxis === 'number') {
-        serialized.ellipse.semiMinorAxis = semiMinorAxis;
+        serializedEllipse.semiMinorAxis = semiMinorAxis;
       }
     }
     if (entity.position) {
       const position = entity.position.getValue(Cesium.JulianDate.now());
       if (position) {
-        serialized.ellipse.center = cartesian3ToLonLat(position);
+        serializedEllipse.center = cartesian3ToLonLat(position);
       }
     }
     if (ellipse.material) {
       const material = ellipse.material.getValue(Cesium.JulianDate.now());
       if (material instanceof Cesium.Color) {
-        serialized.ellipse.materialColor = colorToHexRGB(material);
-        serialized.ellipse.alpha = material.alpha;
+        serializedEllipse.materialColor = colorToHexRGB(material);
+        serializedEllipse.alpha = material.alpha;
       }
     }
     if (ellipse.outline !== undefined) {
-      serialized.ellipse.outline = ellipse.outline.getValue(
+      serializedEllipse.outline = ellipse.outline.getValue(
         Cesium.JulianDate.now()
       ) as boolean;
     }
     if (ellipse.outlineColor) {
       const outlineColor = ellipse.outlineColor.getValue(Cesium.JulianDate.now());
       if (outlineColor) {
-        serialized.ellipse.outlineColor = colorToHexRGB(outlineColor);
-        serialized.ellipse.outlineColorAlpha = outlineColor.alpha;
+        serializedEllipse.outlineColor = colorToHexRGB(outlineColor);
+        serializedEllipse.outlineColorAlpha = outlineColor.alpha;
       }
     }
     if (ellipse.outlineWidth) {
       const outlineWidth = ellipse.outlineWidth.getValue(Cesium.JulianDate.now());
       if (typeof outlineWidth === 'number') {
-        serialized.ellipse.outlineWidth = outlineWidth;
+        serializedEllipse.outlineWidth = outlineWidth;
       }
     }
     if (ellipse.heightReference) {
-      serialized.ellipse.heightReference = ellipse.heightReference.getValue(
+      serializedEllipse.heightReference = ellipse.heightReference.getValue(
         Cesium.JulianDate.now()
       ) as string;
     }
+    serialized.ellipse = serializedEllipse;
   }
 
   // 序列化label
@@ -714,7 +725,7 @@ function deserializeEntity(
  * 导出图层数据（多个图层）
  */
 export function exportLayers(layers: LayerRecord[]): LayerExportData {
-  const serializedLayers: SerializedLayer[] = layers.map((layer) => {
+  const serializedLayers: SerializedLayer[] = layers.map((layer: LayerRecord) => {
     const entities: SerializedEntity[] = Object.values(layer.entities).map(
       (entity) => serializeEntity(entity)
     );
@@ -744,7 +755,7 @@ export function exportLayers(layers: LayerRecord[]): LayerExportData {
  */
 export function exportSingleLayer(layer: LayerRecord): LayerExportData {
   const entities: SerializedEntity[] = Object.values(layer.entities).map(
-    (entity) => serializeEntity(entity)
+    (entity: Cesium.Entity) => serializeEntity(entity)
   );
 
   const primitives: SerializedPrimitive[] = [];

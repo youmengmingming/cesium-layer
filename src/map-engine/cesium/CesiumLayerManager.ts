@@ -39,6 +39,8 @@ export class CesiumLayerManager implements ILayerManager {
       name: layer.name,
       visible: layer.visible,
       type: 'cesium-layer',
+      entityCount: Object.keys(layer.entities).length,
+      primitiveCount: Object.keys(layer.primitives).length,
     }));
   }
 }

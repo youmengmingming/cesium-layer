@@ -491,13 +491,13 @@ const loadPrimitiveById = () => {
   let primitive: Cesium.Primitive | Cesium.PointPrimitiveCollection | undefined;
   let foundLayerId: string | null = null;
   
-  if (props.layerId) {
+  if (props.layerId && props.primitiveId) {
     const layer = layerStore.layers[props.layerId];
     if (layer && layer.primitives[props.primitiveId]) {
       primitive = layer.primitives[props.primitiveId];
       foundLayerId = props.layerId;
     }
-  } else {
+  } else if (props.primitiveId) {
     // 遍历所有图层查找
     for (const layerId in layerStore.layers) {
       const layer = layerStore.layers[layerId];
@@ -750,18 +750,7 @@ const loadEntityProperties = () => {
 
     // 安全地读取 show
     try {
-      const show = entity.show;
-      if (show !== undefined) {
-        if (typeof show === 'boolean') {
-          formData.value.show = show;
-        } else if (typeof show.getValue === 'function') {
-          formData.value.show = show.getValue(viewer.clock.currentTime) ?? true;
-        } else {
-          formData.value.show = true;
-        }
-      } else {
-        formData.value.show = true;
-      }
+      formData.value.show = !!entity.show;
     } catch (e) {
       formData.value.show = true;
     }
@@ -1020,52 +1009,54 @@ const handleSave = () => {
     return;
   }
 
+  if (!entity) return;
+
   // 更新基本属性
-  entity.name = formData.value.name;
+  (entity as any).name = formData.value.name;
   if (formData.value.description) {
-    entity.description = formData.value.description;
+    (entity as any).description = formData.value.description;
   } else {
-    entity.description = undefined;
+    (entity as any).description = undefined;
   }
-  entity.show = formData.value.show;
+  (entity as any).show = formData.value.show;
 
   // 更新点属性
   if (entity.point) {
-    entity.point.pixelSize = pointProps.value.pixelSize;
-    entity.point.color = colorToCesium(pointProps.value.color);
-    entity.point.outlineColor = colorToCesium(pointProps.value.outlineColor);
-    entity.point.outlineWidth = pointProps.value.outlineWidth;
+    (entity.point as any).pixelSize = pointProps.value.pixelSize;
+    (entity.point as any).color = colorToCesium(pointProps.value.color);
+    (entity.point as any).outlineColor = colorToCesium(pointProps.value.outlineColor);
+    (entity.point as any).outlineWidth = pointProps.value.outlineWidth;
   }
 
   // 更新折线属性
   if (entity.polyline) {
-    entity.polyline.width = polylineProps.value.width;
+    (entity.polyline as any).width = polylineProps.value.width;
     // polyline.material 可以是 Color 或 Material
-    entity.polyline.material = colorToCesium(polylineProps.value.color);
+    (entity.polyline as any).material = colorToCesium(polylineProps.value.color);
   }
 
   // 更新多边形属性
   if (entity.polygon) {
     const materialColor = colorToCesium(polygonProps.value.materialColor, polygonProps.value.alpha);
-    entity.polygon.material = materialColor;
-    entity.polygon.outlineColor = colorToCesium(polygonProps.value.outlineColor);
-    entity.polygon.outlineWidth = polygonProps.value.outlineWidth;
+    (entity.polygon as any).material = materialColor;
+    (entity.polygon as any).outlineColor = colorToCesium(polygonProps.value.outlineColor);
+    (entity.polygon as any).outlineWidth = polygonProps.value.outlineWidth;
   }
 
   // 更新矩形属性
   if (entity.rectangle) {
     const materialColor = colorToCesium(rectangleProps.value.materialColor, rectangleProps.value.alpha);
-    entity.rectangle.material = materialColor;
-    entity.rectangle.outlineColor = colorToCesium(rectangleProps.value.outlineColor);
-    entity.rectangle.outlineWidth = rectangleProps.value.outlineWidth;
+    (entity.rectangle as any).material = materialColor;
+    (entity.rectangle as any).outlineColor = colorToCesium(rectangleProps.value.outlineColor);
+    (entity.rectangle as any).outlineWidth = rectangleProps.value.outlineWidth;
   }
 
   // 更新椭圆属性
   if (entity.ellipse) {
     const materialColor = colorToCesium(ellipseProps.value.materialColor, ellipseProps.value.alpha);
-    entity.ellipse.material = materialColor;
-    entity.ellipse.outlineColor = colorToCesium(ellipseProps.value.outlineColor);
-    entity.ellipse.outlineWidth = ellipseProps.value.outlineWidth;
+    (entity.ellipse as any).material = materialColor;
+    (entity.ellipse as any).outlineColor = colorToCesium(ellipseProps.value.outlineColor);
+    (entity.ellipse as any).outlineWidth = ellipseProps.value.outlineWidth;
   }
 
   emit('close');
@@ -1265,16 +1256,16 @@ const handleDelete = () => {
 
   if (confirm('确定要删除这个实体吗？')) {
     const viewer = cesiumStore.getViewer;
-    if (viewer) {
+    if (viewer && entityInfo.value.entity) {
       viewer.entities.remove(entityInfo.value.entity);
 
       // 从图层中移除
       if (entityInfo.value.layerId) {
         layerStore.detachEntity(entityInfo.value.layerId, entityInfo.value.entityId);
       }
-    }
 
-    emit('delete', entityInfo.value.entity);
+      emit('delete', entityInfo.value.entity);
+    }
     emit('close');
   }
 };

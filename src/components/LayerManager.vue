@@ -112,9 +112,11 @@ const handleCreateLayer = () => {
 const ensureDefaultLayer = () => {
   if (layers.value.length === 0) {
     const defaultLayer = createLayer('默认图层');
-    return defaultLayer.id;
+    if (defaultLayer) {
+      return defaultLayer.id;
+    }
   }
-  return layers.value[0].id;
+  return layers.value[0]?.id;
 };
 
 const seedLayerContent = () => {

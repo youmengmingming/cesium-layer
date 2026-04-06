@@ -26,7 +26,7 @@ export class CesiumEngine implements IMapEngine {
       Cesium.Ion.defaultAccessToken = config.token;
     }
 
-    const instance = new Cesium.Viewer(container, {
+    const viewerOptions: any = {
       imageryProvider: new Cesium.OpenStreetMapImageryProvider({
         url: 'https://a.tile.openstreetmap.org/',
       }),
@@ -43,7 +43,9 @@ export class CesiumEngine implements IMapEngine {
       infoBox: false,
       shadows: false,
       shouldAnimate: false,
-    });
+    };
+
+    const instance = new Cesium.Viewer(container, viewerOptions);
 
     this.viewer = instance;
 

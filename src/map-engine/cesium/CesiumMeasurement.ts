@@ -92,11 +92,11 @@ export class CesiumMeasurement implements IMeasurement {
 
   private startPointMeasurement(): void {
     this.handler?.setInputAction(async (click: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
-      let cartesian = this.viewer.scene.pickPosition(click.position);
+      let cartesian: Cesium.Cartesian3 | undefined = this.viewer.scene.pickPosition(click.position);
       if (!cartesian) cartesian = this.viewer.camera.pickEllipsoid(click.position, this.viewer.scene.globe.ellipsoid);
       if (!cartesian) {
         const ray = this.viewer.camera.getPickRay(click.position);
-        if (ray) cartesian = this.viewer.scene.globe.pick(ray, this.viewer.scene);
+        if (ray) cartesian = this.viewer.scene.globe.pick(ray, this.viewer.scene) || undefined;
       }
       if (cartesian) {
         this.positions = [cartesian];
@@ -138,9 +138,13 @@ export class CesiumMeasurement implements IMeasurement {
     this.labels.push(label);
 
     try {
-      const height = await Cesium.sampleTerrainMostDetailed(this.viewer.terrainProvider, [cartographic]);
+      const terrainProvider = this.viewer.terrainProvider as any;
+      const height = await Cesium.sampleTerrainMostDetailed(terrainProvider, [cartographic]);
       elevation = height[0]?.height ?? elevation;
-      label.label!.text = `经度: ${longitude.toFixed(6)}°\n纬度: ${latitude.toFixed(6)}°\n海拔: ${formatElevation(elevation, 'meter')}`;
+      const labelComp = label.label as any;
+      if (labelComp) {
+        labelComp.text = `经度: ${longitude.toFixed(6)}°\n纬度: ${latitude.toFixed(6)}°\n海拔: ${formatElevation(elevation, 'meter')}`;
+      }
     } catch (e) {}
 
     this.emit('measure-change', { longitude, latitude, elevation });
@@ -248,7 +252,14 @@ export class CesiumMeasurement implements IMeasurement {
 
     this.cleanupEntities();
     this.entities.push(this.viewer.entities.add({
-      polygon: { hierarchy: positions, material: Cesium.Color.YELLOW.withAlpha(0.5), outline: true, outlineColor: Cesium.Color.YELLOW, outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND }
+      polygon: { 
+        hierarchy: new Cesium.PolygonHierarchy(positions), 
+        material: Cesium.Color.YELLOW.withAlpha(0.5), 
+        outline: true, 
+        outlineColor: Cesium.Color.YELLOW, 
+        outlineWidth: 2, 
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND 
+      }
     }));
     
     const center = Cesium.BoundingSphere.fromPoints(positions).center;
