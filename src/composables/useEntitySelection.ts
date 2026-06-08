@@ -27,15 +27,18 @@ export function useEntitySelection() {
   /**
    * 获取当前 viewer
    */
+  const isCesiumEngine = () => mapProvider.type === 'cesium';
+
   const getViewer = (): Cesium.Viewer => {
-    // 优先尝试从 mapProvider 获取，它是中间层的核心
+    if (!isCesiumEngine()) {
+      throw new Error('Cesium Viewer 尚未初始化');
+    }
     const engine = mapProvider.engine;
     if (engine) {
       const viewer = engine.getOriginalViewer();
       if (viewer) return viewer;
     }
 
-    // 回退到 store
     const viewerFromStore = cesiumStore.getViewer;
     if (!viewerFromStore) {
       throw new Error('Cesium Viewer 尚未初始化');
@@ -407,9 +410,9 @@ export function useEntitySelection() {
    * 初始化实体选择事件处理
    */
   const initEntitySelection = () => {
+    if (!isCesiumEngine()) return null;
     const viewer = getViewer();
 
-    // 禁用 Cesium 默认的点击选择行为
     viewer.selectedEntity = undefined;
     
     // 禁用 Cesium 默认的双击行为（focus camera on object）

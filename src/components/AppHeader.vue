@@ -20,6 +20,12 @@
         <span class="nav-text">图层管理</span>
       </div>
 
+      <!-- 加载 GeoJSON -->
+      <div class="nav-item" @click="openGeoJsonPicker">
+        <span class="nav-icon">📄</span>
+        <span class="nav-text">加载 GeoJSON</span>
+      </div>
+
       <!-- 测量工具 -->
       <div class="nav-item" @click="openMeasurementToolbar">
         <span class="nav-icon">📐</span>
@@ -46,6 +52,13 @@
     </nav>
 
     <div class="app-header__right">
+      <input
+        ref="geojsonFileInput"
+        type="file"
+        accept=".geojson,application/geo+json,application/json"
+        style="display: none"
+        @change="handleGeoJsonFileChange"
+      />
       <div class="app-header__actions">
         <!-- 地图切换 -->
         <select class="map-engine-select" v-model="currentMapType" @change="handleMapTypeChange">
@@ -73,10 +86,13 @@ import MeasurementToolbar from './MeasurementToolbar.vue';
 import ExampleWidget from './ExampleWidget.vue';
 import EChartsExamples from './EChartsExamples.vue';
 import ThemeSwitcher from './ThemeSwitcher.vue';
+import { useGeoJsonLoader } from '../composables/useGeoJsonLoader';
 
 const { openWidget, closeAllWidgets } = useWidgetManager();
 const showMoreMenu = ref(false);
 const currentMapType = ref<MapEngineType>(mapProvider.type || 'cesium');
+const geojsonFileInput = ref<HTMLInputElement | null>(null);
+const { loadGeoJsonFromFile } = useGeoJsonLoader();
 
 const handleMapTypeChange = async () => {
   // 由于地图初始化需要容器，这里发送一个事件或通过全局 store 通知地图组件切换
@@ -110,6 +126,32 @@ const openLayerManager = () => {
     minWidth: 400,
     minHeight: 500,
   });
+};
+
+const openGeoJsonPicker = () => {
+  geojsonFileInput.value?.click();
+};
+
+const handleGeoJsonFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    const result = await loadGeoJsonFromFile(file, {
+      layerName: file.name.replace(/\.(geojson|json)$/i, ''),
+    });
+    alert(`已加载 GeoJSON 图层：${result.layerName}，共 ${result.featureCount} 条要素`);
+  } catch (error) {
+    console.error('加载 GeoJSON 失败：', error);
+    alert('加载 GeoJSON 失败，请检查文件格式。');
+  } finally {
+    if (geojsonFileInput.value) {
+      geojsonFileInput.value.value = '';
+    }
+  }
 };
 
 // 打开测量工具窗口

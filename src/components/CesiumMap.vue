@@ -197,12 +197,14 @@ const handleOpenSecondary = () => {
   }
 };
 
-// 处理全屏和窗口大小变化
 const handleResize = () => {
-  if (viewer.value) {
-    viewer.value.resize();
+  if (!viewer.value) return
+  if (typeof (viewer.value as any).updateSize === 'function') {
+    (viewer.value as any).updateSize()
+  } else if (typeof (viewer.value as any).resize === 'function') {
+    (viewer.value as any).resize()
   }
-};
+}
 
 const handleMapSwitch = async (event: any) => {
   const type = event.detail as MapEngineType;

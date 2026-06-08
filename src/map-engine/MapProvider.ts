@@ -21,7 +21,7 @@ class MapProvider {
     if (this.currentEngine.value) {
       this.currentEngine.value.destroy();
     }
-
+    container.innerHTML = '';
     const engine = MapEngineFactory.createEngine(type);
     await engine.init(container, options);
     

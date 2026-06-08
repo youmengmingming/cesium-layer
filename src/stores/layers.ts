@@ -181,18 +181,21 @@ export const useLayerStore = defineStore('layer-store', {
         viewer = mapProvider.engine?.getOriginalViewer();
       }
 
-      if (!viewer) {
-        throw new Error('Cesium Viewer 尚未初始化');
+      // 当前引擎不是 Cesium 时跳过实体创建
+      if (!viewer || !('entities' in (viewer as any))) {
+        const layer = this.layers[layerId];
+        if (!layer) {
+          throw new Error(`Layer ${layerId} not found`);
+        }
+        return null;
       }
 
-      // 提取配置（如果存在）
       const config = (entityOptions as any)._config;
       const cleanOptions = { ...entityOptions };
       delete (cleanOptions as any)._config;
 
-      const entity = viewer.entities.add(cleanOptions);
+      const entity = (viewer as any).entities.add(cleanOptions);
       
-      // 恢复配置到实体
       if (config) {
         (entity as any)._config = config;
       }
@@ -214,11 +217,15 @@ export const useLayerStore = defineStore('layer-store', {
         viewer = mapProvider.engine?.getOriginalViewer();
       }
 
-      if (!viewer) {
-        throw new Error('Cesium Viewer 尚未初始化');
+      if (!viewer || !('scene' in (viewer as any))) {
+        const layer = this.layers[layerId];
+        if (!layer) {
+          throw new Error(`Layer ${layerId} not found`);
+        }
+        return null;
       }
 
-      viewer.scene.primitives.add(primitive);
+      (viewer as any).scene.primitives.add(primitive);
       this.attachPrimitive(layerId, primitive);
       primitive.show = this.layers[layerId]?.visible ?? true;
       return primitive;
